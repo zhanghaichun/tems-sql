@@ -164,8 +164,7 @@ BEGIN
       END IF;
 
       /**
-       * 根据 rate id, 判断当前数据的处理模式。
-       * 目前有两种模式： 插入模式 (inserted), 更新模式 (updated)
+       * Decide the update mode. (insert or update)
        */
       SET V_SYSTEM_RULE_ID = TRIM(V_SYSTEM_RULE_ID);
 
@@ -177,81 +176,68 @@ BEGIN
         SET V_LOADING_MODE = V_UPDATE_LOADING_MODE;
       END IF;
 
-      IF (V_LOADING_MODE = V_UPDATE_LOADING_MODE) THEN
-        /**
-         * Updated 模式
-         */
-              
-        CALL SP_UPDATE_CONTRACT_RATE_MODULE_TABLES(V_SYSTEM_RULE_ID, PARAM_BATCH_NO);
+        IF (V_LOADING_MODE = V_UPDATE_LOADING_MODE) THEN
 
-      ELSEIF (V_LOADING_MODE = V_INSERT_LOADING_MODE) THEN
-        /**
-         * Inserted 模式。
-         */
-        
-        INSERT INTO rate_rule_contract_original(
-            sync_flag,
-            summary_vendor_name,
-            charge_type,
-            key_field,
-            usoc,
-            usoc_description,
-            stripped_circuit_number,
-            sub_product,
-            rate,
-            rate_effective_date,
-            term_months,
-            renewal_term_after_term_expiration,
-            early_termination_fee,
-            item_description,
-            contract_name,
-            contract_service_schedule_name,
-            line_item_code,
-            line_item_code_description,
-            total_volume_begin,
-            total_volume_end,
-            mmbc,
-            discount,
-            notes,
-            created_timestamp
-          )
-        VALUES(
-            'N',
-            V_SUMMARY_VENDOR_NAME,
-            V_CHARGE_TYPE,
-            V_KEY_FIELD,
-            V_USOC,
-            V_USOC_DESCRIPTION,
-            V_STRIPPED_CIRCUIT_NUMBER,
-            V_SUB_PRODUCT,
-            V_RATE,
-            V_RATE_EFFECTIVE_DATE,
-            V_TERM,
-            V_RENEWAL_TERM_AFTER_TERM_EXPIRATION,
-            V_EARLY_TERMINATION_FEE,
-            V_ITEM_DESCRIPTIOIN,
-            V_CONTRACT_NAME,
-            V_CONTRACT_SERVICE_SCHEDULE_NAME,
-            V_LINE_ITEM_CODE,
-            V_LINE_ITEM_CODE_DESCRIPTION,
-            V_TOTAL_VOLUME_BEGIN,
-            V_TOTAL_VOLUME_END,
-            V_MMBC,
-            V_DISOCUNT,
-            V_NOTES,
-            NOW()
-          );
+            CALL SP_UPDATE_CONTRACT_RATE_MODULE_TABLES(V_SYSTEM_RULE_ID, PARAM_BATCH_NO);
 
-        
-        /**
-         * 向 rate module 相关表中更新。
-         */
-        CALL SP_INSERT_INTO_CONTRACT_RATE_MODULE_TABLES();
-       
+        ELSEIF (V_LOADING_MODE = V_INSERT_LOADING_MODE) THEN
 
-        
+            INSERT INTO rate_rule_contract_original(
+                sync_flag,
+                summary_vendor_name,
+                charge_type,
+                key_field,
+                usoc,
+                usoc_description,
+                stripped_circuit_number,
+                sub_product,
+                rate,
+                rate_effective_date,
+                term_months,
+                renewal_term_after_term_expiration,
+                early_termination_fee,
+                item_description,
+                contract_name,
+                contract_service_schedule_name,
+                line_item_code,
+                line_item_code_description,
+                total_volume_begin,
+                total_volume_end,
+                mmbc,
+                discount,
+                notes,
+                created_timestamp
+              )
+            VALUES(
+                'N',
+                V_SUMMARY_VENDOR_NAME,
+                V_CHARGE_TYPE,
+                V_KEY_FIELD,
+                V_USOC,
+                V_USOC_DESCRIPTION,
+                V_STRIPPED_CIRCUIT_NUMBER,
+                V_SUB_PRODUCT,
+                V_RATE,
+                V_RATE_EFFECTIVE_DATE,
+                V_TERM,
+                V_RENEWAL_TERM_AFTER_TERM_EXPIRATION,
+                V_EARLY_TERMINATION_FEE,
+                V_ITEM_DESCRIPTIOIN,
+                V_CONTRACT_NAME,
+                V_CONTRACT_SERVICE_SCHEDULE_NAME,
+                V_LINE_ITEM_CODE,
+                V_LINE_ITEM_CODE_DESCRIPTION,
+                V_TOTAL_VOLUME_BEGIN,
+                V_TOTAL_VOLUME_END,
+                V_MMBC,
+                V_DISOCUNT,
+                V_NOTES,
+                NOW()
+              );
 
-      END IF;
+            CALL SP_INSERT_INTO_CONTRACT_RATE_MODULE_TABLES();
+
+        END IF;
 
     END WHILE LABEL1;
 
@@ -261,12 +247,12 @@ BEGIN
   CLOSE V_CONTRACT_MASTER_DATA_CURSOR;
 
   /**
-   * 更新 rate_status.
+   * Update rate status.
    */
   CALL SP_UPDATE_AUDIT_RATE_STATUS();
 
   /**
-   * 处理完数据之后，执行删除操作。
+   * Delete batch data.
    */
   DELETE FROM rate_rule_contact_master_batch WHERE batch_no = PARAM_BATCH_NO;
   

@@ -38,6 +38,7 @@ CREATE TABLE `rate_rule_contract_original` (
   PRIMARY KEY (`id`)
 );
 
+-- cvpp record.
 update audit_rate_period
 set end_date = '2018-07-16'
 where reference_table = 'contract'

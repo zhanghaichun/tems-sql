@@ -132,15 +132,15 @@ BEGIN
 
   DECLARE V_BAN_ID INT;
 
-  /**
-   * 首先更新状态为 '未同步' 状态。
-   */
-  UPDATE rate_rule_contract_original
-  SET sync_flag = 'N', modified_timestamp = NOW()
-  WHERE id = PARAM_SYSTEM_RATE_RULE_ID;
+    /**
+    * 首先更新状态为 '未同步' 状态。
+    */
+    UPDATE rate_rule_contract_original
+    SET sync_flag = 'N', modified_timestamp = NOW()
+    WHERE id = PARAM_SYSTEM_RATE_RULE_ID;
 
   /**
-   * 上传数据
+   * Uploaded data.
    */
   SELECT
     summary_vendor_name,
@@ -148,21 +148,21 @@ BEGIN
     key_field,
     usoc,
     usoc_long_description,
-    stripped_circuit_number, -- + 
+    stripped_circuit_number,
     sub_product,
     rate,
     effective_date,
-    term, -- +
-    renewal_term_after_term_expiration, -- +
-    early_termination_fee, -- +
+    term, 
+    renewal_term_after_term_expiration, 
+    early_termination_fee, 
     item_description,
-    contract_name, -- +
-    contract_service_schedule_name, -- +
+    contract_name, 
+    contract_service_schedule_name,
     line_item_code,
     line_item_code_description,
-    total_volume_begin, -- +
-    total_volume_end, -- +
-    mmbc, -- +
+    total_volume_begin,
+    total_volume_end, 
+    mmbc,
     discount,
     notes
       INTO
@@ -193,7 +193,7 @@ BEGIN
     AND rate_id = PARAM_SYSTEM_RATE_RULE_ID;
 
   /**
-   * 主表中的原始数据。
+   * Original data inside master table.
    */
   SELECT
     audit_reference_mapping_id,
@@ -249,238 +249,254 @@ BEGIN
   WHERE id = PARAM_SYSTEM_RATE_RULE_ID
     AND rec_active_flag = 'Y';
 
-  /**
-   * 判断字段是否有更新
-   */
-  
-  IF( V_SUMMARY_VENDOR_NAME != V_ORIGIN_SUMMARY_VENDOR_NAME AND V_UPDATED_FLAG = FALSE ) THEN
-    SET V_UPDATED_FLAG = TRUE;
-  END IF;
+    CONTRAST_FIELDS: BEGIN
 
-  IF( V_CHARGE_TYPE != V_ORIGIN_CHARGE_TYPE AND V_UPDATED_FLAG = FALSE ) THEN
-    SET V_UPDATED_FLAG = TRUE;
-  END IF;
+        -- Contrast fields.
+        IF( IFNULL(V_SUMMARY_VENDOR_NAME, '') != IFNULL(V_ORIGIN_SUMMARY_VENDOR_NAME,'') ) THEN
+            SET V_UPDATED_FLAG = TRUE;
+            LEAVE CONTRAST_FIELDS;
+        END IF;
 
-  IF( V_KEY_FIELD != V_ORIGIN_KEY_FIELD AND V_UPDATED_FLAG = FALSE ) THEN
-    SET V_UPDATED_FLAG = TRUE;
-  END IF;
+        IF( IFNULL(V_CHARGE_TYPE, '') != IFNULL(V_ORIGIN_CHARGE_TYPE,'') ) THEN
+            SET V_UPDATED_FLAG = TRUE;
+            LEAVE CONTRAST_FIELDS;
+        END IF;
 
-  IF( V_USOC != V_ORIGIN_USOC AND V_UPDATED_FLAG = FALSE ) THEN
-    SET V_UPDATED_FLAG = TRUE;
-  END IF;
+        IF( IFNULL(V_KEY_FIELD, '') != IFNULL(V_ORIGIN_KEY_FIELD, '') ) THEN
+            SET V_UPDATED_FLAG = TRUE;
+            LEAVE CONTRAST_FIELDS;
+        END IF;
 
-  
+        IF( IFNULL(V_USOC, '') != IFNULL(V_ORIGIN_USOC, '') ) THEN
+            SET V_UPDATED_FLAG = TRUE;
+            LEAVE CONTRAST_FIELDS;
+        END IF;
 
-  IF( V_USOC_DESCRIPTION != V_ORIGIN_USOC_DESCRIPTION AND V_UPDATED_FLAG = FALSE ) THEN
-    SET V_UPDATED_FLAG = TRUE;
-  END IF;
+        IF( IFNULL(V_USOC_DESCRIPTION, '') != IFNULL(V_ORIGIN_USOC_DESCRIPTION, '') ) THEN
+            SET V_UPDATED_FLAG = TRUE;
+            LEAVE CONTRAST_FIELDS;
+        END IF;
 
-  IF( V_STRIPPED_CIRCUIT_NUMBER != V_ORIGIN_STRIPPED_CIRCUIT_NUMBER AND V_UPDATED_FLAG = FALSE ) THEN
-    SET V_UPDATED_FLAG = TRUE;
-  END IF;
+        IF( IFNULL(V_STRIPPED_CIRCUIT_NUMBER, '') != IFNULL(V_ORIGIN_STRIPPED_CIRCUIT_NUMBER, '') ) THEN
+            SET V_UPDATED_FLAG = TRUE;
+            LEAVE CONTRAST_FIELDS;
+        END IF;
 
-  IF( V_SUB_PRODUCT != V_ORIGIN_SUB_PRODUCT AND V_UPDATED_FLAG = FALSE ) THEN
-    SET V_UPDATED_FLAG = TRUE;
-  END IF;
+        IF( IFNULL(V_SUB_PRODUCT, '') != IFNULL(V_ORIGIN_SUB_PRODUCT, '') ) THEN
+            SET V_UPDATED_FLAG = TRUE;
+            LEAVE CONTRAST_FIELDS;
+        END IF;
 
-  IF( V_RATE != V_ORIGIN_RATE AND V_UPDATED_FLAG = FALSE ) THEN
-    SET V_UPDATED_FLAG = TRUE;
-  END IF;
+        IF( IFNULL(V_RATE, '') != IFNULL(V_ORIGIN_RATE, '') ) THEN
+            SET V_UPDATED_FLAG = TRUE;
+            LEAVE CONTRAST_FIELDS;
+        END IF;
 
-  IF( V_RATE_EFFECTIVE_DATE != V_ORIGIN_RATE_EFFECTIVE_DATE AND V_UPDATED_FLAG = FALSE ) THEN
-    SET V_UPDATED_FLAG = TRUE;
-  END IF;
+        IF( IFNULL(V_RATE_EFFECTIVE_DATE, '') != IFNULL(V_ORIGIN_RATE_EFFECTIVE_DATE, '') ) THEN
+            SET V_UPDATED_FLAG = TRUE;
+            LEAVE CONTRAST_FIELDS;
+        END IF;
 
-  IF( V_TERM != V_ORIGIN_TERM AND V_UPDATED_FLAG = FALSE ) THEN
-    SET V_UPDATED_FLAG = TRUE;
-  END IF;
+        IF( IFNULL(V_TERM, '') != IFNULL(V_ORIGIN_TERM, '') ) THEN
+            SET V_UPDATED_FLAG = TRUE;
+            LEAVE CONTRAST_FIELDS;
+        END IF;
 
-  IF( V_RENEWAL_TERM_AFTER_TERM_EXPIRATION != V_ORIGIN_RENEWAL_TERM_AFTER_TERM_EXPIRATION AND V_UPDATED_FLAG = FALSE ) THEN
-    SET V_UPDATED_FLAG = TRUE;
-  END IF;
+        IF( IFNULL(V_RENEWAL_TERM_AFTER_TERM_EXPIRATION, '') != IFNULL(V_ORIGIN_RENEWAL_TERM_AFTER_TERM_EXPIRATION, '') ) THEN
+            SET V_UPDATED_FLAG = TRUE;
+            LEAVE CONTRAST_FIELDS;
+        END IF;
 
-  IF( V_EARLY_TERMINATION_FEE != V_ORIGIN_EARLY_TERMINATION_FEE AND V_UPDATED_FLAG = FALSE ) THEN
-    SET V_UPDATED_FLAG = TRUE;
-  END IF;
+        IF( IFNULL(V_EARLY_TERMINATION_FEE, '') != IFNULL(V_ORIGIN_EARLY_TERMINATION_FEE, '') ) THEN
+            SET V_UPDATED_FLAG = TRUE;
+            LEAVE CONTRAST_FIELDS;
+        END IF;
 
-  IF( V_ITEM_DESCRIPTIOIN != V_ORIGIN_ITEM_DESCRIPTIOIN AND V_UPDATED_FLAG = FALSE ) THEN
-    SET V_UPDATED_FLAG = TRUE;
-  END IF;
+        IF( IFNULL(V_ITEM_DESCRIPTIOIN, '') != IFNULL(V_ORIGIN_ITEM_DESCRIPTIOIN, '')  ) THEN
+            SET V_UPDATED_FLAG = TRUE;
+            LEAVE CONTRAST_FIELDS;
+        END IF;
 
-  IF( V_CONTRACT_NAME != V_ORIGIN_CONTRACT_NAME AND V_UPDATED_FLAG = FALSE ) THEN
-    SET V_UPDATED_FLAG = TRUE;
-  END IF;
+        IF( IFNULL(V_CONTRACT_NAME, '') != IFNULL(V_ORIGIN_CONTRACT_NAME, '') ) THEN
+            SET V_UPDATED_FLAG = TRUE;
+            LEAVE CONTRAST_FIELDS;
+        END IF;
 
-  IF( V_CONTRACT_SERVICE_SCHEDULE_NAME != V_ORIIGIN_CONTRACT_SERVICE_SCHEDULE_NAME AND V_UPDATED_FLAG = FALSE ) THEN
-    SET V_UPDATED_FLAG = TRUE;
-  END IF;
+        IF( IFNULL(V_CONTRACT_SERVICE_SCHEDULE_NAME, '') != IFNULL(V_ORIIGIN_CONTRACT_SERVICE_SCHEDULE_NAME, '') ) THEN
+            SET V_UPDATED_FLAG = TRUE;
+            LEAVE CONTRAST_FIELDS;
+        END IF;
 
-  IF( V_LINE_ITEM_CODE != V_ORIGIN_LINE_ITEM_CODE AND V_UPDATED_FLAG = FALSE ) THEN
-    SET V_UPDATED_FLAG = TRUE;
-  END IF;
+        IF( IFNULL(V_LINE_ITEM_CODE, '') != IFNULL(V_ORIGIN_LINE_ITEM_CODE, '') ) THEN
+            SET V_UPDATED_FLAG = TRUE;
+            LEAVE CONTRAST_FIELDS;
+        END IF;
 
-  IF( V_LINE_ITEM_CODE_DESCRIPTION != V_ORIGIN_LINE_ITEM_CODE_DESCRIPTION AND V_UPDATED_FLAG = FALSE ) THEN
-    SET V_UPDATED_FLAG = TRUE;
-  END IF;
+        IF( IFNULL(V_LINE_ITEM_CODE_DESCRIPTION, '') != IFNULL(V_ORIGIN_LINE_ITEM_CODE_DESCRIPTION, '') ) THEN
+            SET V_UPDATED_FLAG = TRUE;
+            LEAVE CONTRAST_FIELDS;
+        END IF;
 
-  IF( V_TOTAL_VOLUME_BEGIN != V_ORIGIN_TOTAL_VOLUME_BEGIN AND V_UPDATED_FLAG = FALSE ) THEN
-    SET V_UPDATED_FLAG = TRUE;
-  END IF;
+        IF( IFNULL(V_TOTAL_VOLUME_BEGIN, '') != IFNULL(V_ORIGIN_TOTAL_VOLUME_BEGIN, '') ) THEN
+            SET V_UPDATED_FLAG = TRUE;
+            LEAVE CONTRAST_FIELDS;
+        END IF;
 
-  IF( V_TOTAL_VOLUME_END != V_ORIGIN_TOTAL_VOLUME_END AND V_UPDATED_FLAG = FALSE ) THEN
-    SET V_UPDATED_FLAG = TRUE;
-  END IF;
+        IF( IFNULL(V_TOTAL_VOLUME_END, '') != IFNULL(V_ORIGIN_TOTAL_VOLUME_END, '') ) THEN
+            SET V_UPDATED_FLAG = TRUE;
+            LEAVE CONTRAST_FIELDS;
+        END IF;
 
-  IF( V_MMBC != V_ORIGIN_MMBC AND V_UPDATED_FLAG = FALSE ) THEN
-    SET V_UPDATED_FLAG = TRUE;
-  END IF;
+        IF( IFNULL(V_MMBC, '') != IFNULL(V_ORIGIN_MMBC, '') ) THEN
+            SET V_UPDATED_FLAG = TRUE;
+            LEAVE CONTRAST_FIELDS;
+        END IF;
 
-  IF( V_DISOCUNT != V_ORIGIN_DISOCUNT AND V_UPDATED_FLAG = FALSE ) THEN
-    SET V_UPDATED_FLAG = TRUE;
-  END IF;
+        IF( IFNULL(V_DISOCUNT, '') != IFNULL(V_ORIGIN_DISOCUNT, '') ) THEN
+            SET V_UPDATED_FLAG = TRUE;
+            LEAVE CONTRAST_FIELDS;
+        END IF;
 
-  IF( V_NOTES!= V_ORIGIN_NOTES AND V_UPDATED_FLAG = FALSE ) THEN
-    SET V_UPDATED_FLAG = TRUE;
-  END IF;
+        IF( IFNULL(V_NOTES, '') != IFNULL(V_ORIGIN_NOTES, '') ) THEN
+            SET V_UPDATED_FLAG = TRUE;
+            LEAVE CONTRAST_FIELDS;
+        END IF;
 
-
+    END CONTRAST_FIELDS;
   /**
    * 如果字段有更新， 那么执行更新操作， 如果字段没有更新，
    * 就只修改同步状态即可。 
    */
-  IF(V_UPDATED_FLAG = TRUE) THEN
+    IF(V_UPDATED_FLAG = TRUE) THEN
 
-    /**
-     * 更新操作
-     */
-    UPDATE rate_rule_contract_original
-    SET 
-      summary_vendor_name = V_SUMMARY_VENDOR_NAME,
-      charge_type = V_CHARGE_TYPE,
-      key_field = V_KEY_FIELD,
-      usoc = V_USOC,
-      usoc_description = V_USOC_DESCRIPTION,
-      sub_product = V_SUB_PRODUCT,
-      stripped_circuit_number = V_STRIPPED_CIRCUIT_NUMBER,
-      rate = V_RATE,
-      rate_effective_date = V_RATE_EFFECTIVE_DATE,
-      term_months = V_TERM,
-      renewal_term_after_term_expiration = V_RENEWAL_TERM_AFTER_TERM_EXPIRATION,
-      early_termination_fee = V_EARLY_TERMINATION_FEE,
-      item_description = V_ITEM_DESCRIPTIOIN,
-      contract_name = V_CONTRACT_NAME,
-      contract_service_schedule_name = V_CONTRACT_SERVICE_SCHEDULE_NAME,
-      line_item_code = V_LINE_ITEM_CODE,
-      line_item_code_description = V_LINE_ITEM_CODE_DESCRIPTION,
-      total_volume_begin = V_TOTAL_VOLUME_BEGIN,
-      total_volume_end = V_TOTAL_VOLUME_END,
-      mmbc = V_MMBC,
-      discount = V_DISOCUNT,
-      notes = V_NOTES
-    WHERE id = PARAM_SYSTEM_RATE_RULE_ID;
+        /**
+         * 更新操作
+         */
+        UPDATE rate_rule_contract_original
+        SET 
+          summary_vendor_name = V_SUMMARY_VENDOR_NAME,
+          charge_type = V_CHARGE_TYPE,
+          key_field = V_KEY_FIELD,
+          usoc = V_USOC,
+          usoc_description = V_USOC_DESCRIPTION,
+          sub_product = V_SUB_PRODUCT,
+          stripped_circuit_number = V_STRIPPED_CIRCUIT_NUMBER,
+          rate = V_RATE,
+          rate_effective_date = V_RATE_EFFECTIVE_DATE,
+          term_months = V_TERM,
+          renewal_term_after_term_expiration = V_RENEWAL_TERM_AFTER_TERM_EXPIRATION,
+          early_termination_fee = V_EARLY_TERMINATION_FEE,
+          item_description = V_ITEM_DESCRIPTIOIN,
+          contract_name = V_CONTRACT_NAME,
+          contract_service_schedule_name = V_CONTRACT_SERVICE_SCHEDULE_NAME,
+          line_item_code = V_LINE_ITEM_CODE,
+          line_item_code_description = V_LINE_ITEM_CODE_DESCRIPTION,
+          total_volume_begin = V_TOTAL_VOLUME_BEGIN,
+          total_volume_end = V_TOTAL_VOLUME_END,
+          mmbc = V_MMBC,
+          discount = V_DISOCUNT,
+          notes = V_NOTES
+        WHERE id = PARAM_SYSTEM_RATE_RULE_ID;
 
-    
-   
+        CALL SP_GET_AUDIT_KEY_FIELD_AND_RATE_MODE(
+            V_KEY_FIELD,
+            'contract',
+            V_MAPPING_KEY_FIELD,
+            V_RATE_MODE,
+            V_REFERENCE_TABLE
+          );
 
-    CALL SP_GET_AUDIT_KEY_FIELD_AND_RATE_MODE(
-        V_KEY_FIELD,
-        'contract',
-        V_MAPPING_KEY_FIELD,
-        V_RATE_MODE,
-        V_REFERENCE_TABLE
-      );
-    
-    SET V_VENDOR_GROUP_ID = FN_GET_CONTRACT_VENDOR_GROUP_ID(PARAM_SYSTEM_RATE_RULE_ID);
+        SET V_VENDOR_GROUP_ID = FN_GET_CONTRACT_VENDOR_GROUP_ID(PARAM_SYSTEM_RATE_RULE_ID);
 
-    /**
-     * 更新 audit_reference_mapping 表
-     */
-    UPDATE audit_reference_mapping
-    SET 
-      vendor_group_id = V_VENDOR_GROUP_ID, 
-      summary_vendor_name = V_SUMMARY_VENDOR_NAME, 
-      key_field = V_MAPPING_KEY_FIELD,
-      key_field_original = V_KEY_FIELD, 
-      charge_type = V_CHARGE_TYPE, 
-      usoc = V_USOC, 
-      usoc_description = V_USOC_DESCRIPTION,
-      circuit_number = V_STRIPPED_CIRCUIT_NUMBER,
-      sub_product = V_SUB_PRODUCT, 
-      line_item_code = V_LINE_ITEM_CODE, 
-      line_item_code_description = V_LINE_ITEM_CODE_DESCRIPTION, 
-      item_description = V_ITEM_DESCRIPTIOIN, 
-      modified_timestamp = NOW()
-    WHERE id = V_ORIGIN_AUDIT_REFERENCE_MAPPING_ID
-      AND rec_active_flag = 'Y';
-
-    SET V_CONTRACT_ID = (
-        SELECT audit_reference_id
-        FROM audit_reference_mapping
+        /**
+         * 更新 audit_reference_mapping 表
+         */
+        UPDATE audit_reference_mapping
+        SET 
+          vendor_group_id = V_VENDOR_GROUP_ID, 
+          summary_vendor_name = V_SUMMARY_VENDOR_NAME, 
+          key_field = V_MAPPING_KEY_FIELD,
+          key_field_original = V_KEY_FIELD, 
+          charge_type = V_CHARGE_TYPE, 
+          usoc = V_USOC, 
+          usoc_description = V_USOC_DESCRIPTION,
+          circuit_number = V_STRIPPED_CIRCUIT_NUMBER,
+          sub_product = V_SUB_PRODUCT, 
+          line_item_code = V_LINE_ITEM_CODE, 
+          line_item_code_description = V_LINE_ITEM_CODE_DESCRIPTION, 
+          item_description = V_ITEM_DESCRIPTIOIN, 
+          modified_timestamp = NOW()
         WHERE id = V_ORIGIN_AUDIT_REFERENCE_MAPPING_ID
-          AND rec_active_flag = 'Y'
-      );
+          AND rec_active_flag = 'Y';
+
+        SET V_CONTRACT_ID = (
+            SELECT audit_reference_id
+            FROM audit_reference_mapping
+            WHERE id = V_ORIGIN_AUDIT_REFERENCE_MAPPING_ID
+              AND rec_active_flag = 'Y'
+          );
 
 
-    /**
-     * 2. 更新 contract_file 表
-     */
-    
-    SELECT COUNT(1) INTO V_CONTRACT_FILE_ITEM_COUNT
-    FROM contract_file
-    WHERE contract_number = V_TARIFF_FILE_NAME
-      AND effective_date = V_RATE_EFFECTIVE_DATE
-      AND rec_active_flag = 'Y';
+        /**
+         * 2. 更新 contract_file 表
+         */
 
-    IF (V_CONTRACT_FILE_ITEM_COUNT = 0) THEN
+        SELECT COUNT(1) INTO V_CONTRACT_FILE_ITEM_COUNT
+        FROM contract_file
+        WHERE contract_number = V_TARIFF_FILE_NAME
+          AND effective_date = V_RATE_EFFECTIVE_DATE
+          AND rec_active_flag = 'Y';
 
-      /**
-       * contract_file 表中没有相应记录。
-       */
-      INSERT INTO contract_file(
-        contract_number,
-        effective_date,
-        term,
-        term_quantity,
-        term_combined,
-        expiry_date,
-        renewal_term_after_term_expiration,
-        created_timestamp
-      )
-      VALUES(
-          V_CONTRACT_NAME,
-          V_RATE_EFFECTIVE_DATE,
-          'MONTH',
-          V_TERM,
-          CONCAT(V_TERM, ' months'),
-          DATE_SUB(
-            DATE_ADD(effective_date,INTERVAL term_quantity MONTH),
-            INTERVAL 1 DAY
-          ),
-          V_RENEWAL_TERM_AFTER_TERM_EXPIRATION,
-          NOW()
-        );
+        IF (V_CONTRACT_FILE_ITEM_COUNT = 0) THEN
 
-      SET V_CONTRACT_FILE_ID = ( SELECT MAX(id) FROM contract_file );
+          /**
+           * contract_file 表中没有相应记录。
+           */
+          INSERT INTO contract_file(
+            contract_number,
+            effective_date,
+            term,
+            term_quantity,
+            term_combined,
+            expiry_date,
+            renewal_term_after_term_expiration,
+            created_timestamp
+          )
+          VALUES(
+              V_CONTRACT_NAME,
+              V_RATE_EFFECTIVE_DATE,
+              'MONTH',
+              V_TERM,
+              CONCAT(V_TERM, ' months'),
+              DATE_SUB(
+                DATE_ADD(effective_date,INTERVAL term_quantity MONTH),
+                INTERVAL 1 DAY
+              ),
+              V_RENEWAL_TERM_AFTER_TERM_EXPIRATION,
+              NOW()
+            );
 
-    ELSE
+          SET V_CONTRACT_FILE_ID = ( SELECT MAX(id) FROM contract_file );
 
-      /**
-       * 如果 contract_file 表中有相应记录。
-       */
-      
-      SELECT id INTO V_CONTRACT_FILE_ID
-      FROM contract_file
-      WHERE contract_number = V_CONTRACT_NAME
-        AND effective_date = V_RATE_EFFECTIVE_DATE
-        AND rec_active_flag = 'Y';
+        ELSE
 
-    END IF;
-    
+          /**
+           * 如果 contract_file 表中有相应记录。
+           */
+          
+          SELECT id INTO V_CONTRACT_FILE_ID
+          FROM contract_file
+          WHERE contract_number = V_CONTRACT_NAME
+            AND effective_date = V_RATE_EFFECTIVE_DATE
+            AND rec_active_flag = 'Y';
+
+        END IF;
+
 
     /**
      * 3. 更新 contract 表。
      */
-    
+
     UPDATE contract
     SET 
       contract_file_id = V_CONTRACT_FILE_ID, 
@@ -637,7 +653,7 @@ BEGIN
       -- END IF;
       
     END IF;
-   
+
     /**
      * 最后更新同步标记。
      */
@@ -645,11 +661,11 @@ BEGIN
     SET sync_flag = 'Y'
     WHERE id = PARAM_SYSTEM_RATE_RULE_ID;
 
-  ELSE
+    ELSE
 
     UPDATE rate_rule_contract_original
     SET sync_flag = 'Y'
     WHERE id = PARAM_SYSTEM_RATE_RULE_ID;
 
-  END IF;
+    END IF;
 END
