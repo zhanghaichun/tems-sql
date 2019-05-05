@@ -1,0 +1,43 @@
+DROP PROCEDURE IF EXISTS SP_SWITCH_RATE_MODULE_TEST_ENVIRONMENT;
+CREATE PROCEDURE SP_SWITCH_RATE_MODULE_TEST_ENVIRONMENT(PARAM_SWITCH_STATE VARCHAR(12))
+
+BEGIN 
+
+  /**
+   * @params {varchar} 当前需要转换的状态
+   */
+  
+  DECLARE RATE_MODULE_CURRENT_STATE VARCHAR(12);
+
+  SELECT current_state INTO RATE_MODULE_CURRENT_STATE
+  FROM rate_module_tables_current_state
+  WHERE id = 1;
+
+  IF (PARAM_SWITCH_STATE = 'DEV') THEN
+
+    IF (RATE_MODULE_CURRENT_STATE = 'PROD') THEN
+      CALL SP_SWITCH_RATE_MODULE_TABLES_TO_DEV_ENVIRONMENT();
+
+      UPDATE rate_module_tables_current_state
+      SET current_state = 'DEV'
+      WHERE id = 1;
+
+    END IF;
+
+  ELSEIF (PARAM_SWITCH_STATE = 'PROD') THEN
+
+    IF (RATE_MODULE_CURRENT_STATE = 'DEV') THEN
+      CALL SP_SWITCH_RATE_MODULE_TABLES_TO_PROD_ENVIRONMENT();
+
+      UPDATE rate_module_tables_current_state
+      SET current_state = 'PROD'
+      WHERE id = 1;
+      
+    END IF;
+
+  END IF;
+
+
+  
+
+END;
