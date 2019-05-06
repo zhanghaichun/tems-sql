@@ -2,9 +2,11 @@ DROP FUNCTION IF EXISTS FN_GET_TARIFF_VENDOR_GROUP_ID;
 CREATE FUNCTION FN_GET_TARIFF_VENDOR_GROUP_ID( PARAM_MASTER_TABLE_ID INT) RETURNS INT
 
 BEGIN 
-  
- 
-
+    
+    /**
+     * Get tariff vendor group id.
+     */
+    
     DECLARE V_SUMMARY_VENDOR_NAME VARCHAR(128);
     DECLARE V_VENDOR_NAME VARCHAR(128);
 
@@ -46,25 +48,12 @@ BEGIN
 
         IF (V_VENDOR_NAME IS NULL OR V_VENDOR_NAME = '') THEN
 
-          IF( POSITION(' OR ' IN V_SUMMARY_VENDOR_NAME) ) THEN
-
-            CALL SP_SPLIT_SUMMARY_VENDOR_MULTIPLE_FIELD_VALUE(
-                V_SUMMARY_VENDOR_NAME, 
-                V_RETURNED_VENDOR_GROUP_ID
-              );
-
-          ELSE
-
-            /**
-             * 查看当前 summary_vendor_name 是否存在于 vendor_group 表中。
-             */
-
             SELECT GROUP_CONCAT( CAST(id AS CHAR) ORDER BY id )
-              INTO V_VENDOR_IDS
+                INTO V_VENDOR_IDS
             FROM vendor
             WHERE summary_vendor_name = V_SUMMARY_VENDOR_NAME
-              AND vendor_status_id = 1
-              AND rec_active_flag = 'Y';
+                AND vendor_status_id = 1
+                AND rec_active_flag = 'Y';
 
             SELECT COUNT(1) INTO V_VENDOR_IDS_ITEM_COUNT
             FROM vendor_group
@@ -72,136 +61,91 @@ BEGIN
 
             IF (V_VENDOR_IDS_ITEM_COUNT = 0) THEN
 
-              /**
-               * vendor_group 表中不存在此 summary vendor.
-               */
-              
-              INSERT INTO vendor_group (group_name, vendor_ids, notes)
-              VALUES (V_SUMMARY_VENDOR_NAME, V_VENDOR_IDS, CONCAT(V_SUMMARY_VENDOR_NAME, ' Summary Vendor') );
+                INSERT INTO vendor_group (group_name, vendor_ids, notes)
+                VALUES (V_SUMMARY_VENDOR_NAME, V_VENDOR_IDS, CONCAT(V_SUMMARY_VENDOR_NAME, ' Summary Vendor') );
 
-              SET V_RETURNED_VENDOR_GROUP_ID = ( SELECT MAX(id) FROM vendor_group );
+                SET V_RETURNED_VENDOR_GROUP_ID = ( SELECT MAX(id) FROM vendor_group );
 
-              /**
-               * 循环向 vendor_group_vendor 表中插入记录
-               * 这些记录代表的是： vendor 都属于当前 summary_vendor， 但是在 vendor_group_vendor 中不存在
-               * 对应关系。
-               */
-              OPEN V_VENDOR_CURSOR;
+                OPEN V_VENDOR_CURSOR;
 
-                LABEL1:
-                WHILE NOT V_CURSOR_DONE_FLAG
-                DO
-                  FETCH V_VENDOR_CURSOR INTO V_VENDOR_ID;
+                    LABEL1:
+                    WHILE NOT V_CURSOR_DONE_FLAG DO
 
-                  IF (V_CURSOR_DONE_FLAG) THEN
-                    LEAVE LABEL1;
-                  END IF;
+                        FETCH V_VENDOR_CURSOR INTO V_VENDOR_ID;
 
-                  /**
-                   * 检索 vendor_group_vendor 表中是否有当前的对应关系。
-                   */
-                  SELECT COUNT(1) INTO V_MATCH_ITEM_COUNT
-                  FROM vendor_group_vendor
-                  WHERE vendor_group_id = V_RETURNED_VENDOR_GROUP_ID
-                    AND vendor_id = V_VENDOR_ID;
+                        IF (V_CURSOR_DONE_FLAG) THEN
+                            LEAVE LABEL1;
+                        END IF;
 
-                  IF (V_MATCH_ITEM_COUNT = 0) THEN
+                        SELECT COUNT(1) INTO V_MATCH_ITEM_COUNT
+                        FROM vendor_group_vendor
+                        WHERE vendor_group_id = V_RETURNED_VENDOR_GROUP_ID
+                            AND vendor_id = V_VENDOR_ID;
 
-                    /**
-                     * vendor_group_vendor 表中不存在对应关系， 则执行插入。
-                     */
-                    INSERT INTO vendor_group_vendor (vendor_group_id, vendor_id)
-                    VALUES(V_RETURNED_VENDOR_GROUP_ID, V_VENDOR_ID);
+                        IF (V_MATCH_ITEM_COUNT = 0) THEN
 
-                  END IF;
+                            INSERT INTO vendor_group_vendor (vendor_group_id, vendor_id)
+                            VALUES(V_RETURNED_VENDOR_GROUP_ID, V_VENDOR_ID);
 
-                END WHILE LABEL1;
+                        END IF;
 
-              CLOSE V_VENDOR_CURSOR;
+                    END WHILE LABEL1;
+
+                CLOSE V_VENDOR_CURSOR;
 
             ELSE
 
-              /**
-               * vendor_group 表中存在此 summary vendor.
-               */
-              SET V_RETURNED_VENDOR_GROUP_ID = (
-                  SELECT id
-                  FROM vendor_group
-                  WHERE vendor_ids = V_VENDOR_IDS
-                  LIMIT 1
+                SET V_RETURNED_VENDOR_GROUP_ID = (
+                    SELECT id
+                    FROM vendor_group
+                    WHERE vendor_ids = V_VENDOR_IDS
+                    LIMIT 1
                 );
 
             END IF;
-
-          END IF;
-
-          
 
         ELSE
 
-          IF( POSITION(' OR ' IN V_VENDOR_NAME) ) THEN
-
-            /**
-             * vendor_name 中存在 or 的情况。
-             */
-
-            CALL SP_SPLIT_VENDOR_MULTIPLE_FIELD_VALUE(V_VENDOR_NAME, V_RETURNED_VENDOR_GROUP_ID);
-
-          ELSE
-
-            /**
-             * vendor_name 中不存在 or 的情况。
-             */
-            
             SELECT GROUP_CONCAT( CAST(id AS CHAR) ORDER BY id )
-              INTO V_VENDOR_IDS
+                INTO V_VENDOR_IDS
             FROM vendor
             WHERE vendor_name = V_VENDOR_NAME
-              AND vendor_status_id = 1
-              AND rec_active_flag = 'Y';
+                AND vendor_status_id = 1
+                AND rec_active_flag = 'Y';
 
             SELECT COUNT(1) INTO V_VENDOR_IDS_ITEM_COUNT
             FROM vendor_group
             WHERE vendor_ids = V_VENDOR_IDS;
 
             IF (V_VENDOR_IDS_ITEM_COUNT = 0) THEN
-              /**
-               * vendor_group 表中不存在此 summary vendor.
-               */
               
-              INSERT INTO vendor_group (group_name, vendor_ids, notes)
-              VALUES (V_VENDOR_NAME, V_VENDOR_IDS, CONCAT(V_VENDOR_NAME, ' Vendor'));
+                INSERT INTO vendor_group (group_name, vendor_ids, notes)
+                VALUES (V_VENDOR_NAME, V_VENDOR_IDS, CONCAT(V_VENDOR_NAME, ' Vendor'));
 
-              SET V_RETURNED_VENDOR_GROUP_ID = ( SELECT MAX(id) FROM vendor_group );
+                SET V_RETURNED_VENDOR_GROUP_ID = ( SELECT MAX(id) FROM vendor_group );
 
-              SELECT COUNT(1) INTO V_MATCH_ITEM_COUNT
-              FROM vendor
-              WHERE vendor_group_id = V_RETURNED_VENDOR_GROUP_ID
-                AND vendor_id = V_VENDOR_IDS;
+                SELECT COUNT(1) INTO V_MATCH_ITEM_COUNT
+                FROM vendor
+                WHERE vendor_group_id = V_RETURNED_VENDOR_GROUP_ID
+                    AND vendor_id = V_VENDOR_IDS;
 
-              IF(V_MATCH_ITEM_COUNT) THEN
+                IF(V_MATCH_ITEM_COUNT) THEN
 
-                INSERT INTO vendor_group_vendor (vendor_group_id, vendor_id)
-                VALUES(V_RETURNED_VENDOR_GROUP_ID, V_VENDOR_IDS);
+                    INSERT INTO vendor_group_vendor (vendor_group_id, vendor_id)
+                    VALUES(V_RETURNED_VENDOR_GROUP_ID, V_VENDOR_IDS);
 
-              END IF;
+                END IF;
 
             ELSE
 
-              /**
-               * vendor_group 表中存在此 summary vendor.
-               */
-              SET V_RETURNED_VENDOR_GROUP_ID = (
-                  SELECT id
-                  FROM vendor_group
-                  WHERE vendor_ids = V_VENDOR_IDS
-                  LIMIT 1
+                SET V_RETURNED_VENDOR_GROUP_ID = (
+                    SELECT id
+                    FROM vendor_group
+                    WHERE vendor_ids = V_VENDOR_IDS
+                    LIMIT 1
                 );
 
             END IF;
-            
-
-          END IF;
 
         END IF;
 
