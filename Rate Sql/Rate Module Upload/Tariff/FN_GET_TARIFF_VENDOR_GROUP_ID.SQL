@@ -125,7 +125,7 @@ BEGIN
                 SET V_RETURNED_VENDOR_GROUP_ID = ( SELECT MAX(id) FROM vendor_group );
 
                 SELECT COUNT(1) INTO V_MATCH_ITEM_COUNT
-                FROM vendor
+                FROM vendor_group_vendor
                 WHERE vendor_group_id = V_RETURNED_VENDOR_GROUP_ID
                     AND vendor_id = V_VENDOR_IDS;
 

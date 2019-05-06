@@ -381,7 +381,6 @@ BEGIN
 
     IF(V_UPDATED_FLAG = TRUE) THEN
 
-
         UPDATE rate_rule_tariff_original
         SET charge_type = V_CHARGE_TYPE,
             key_field = V_KEY_FIELD,
@@ -413,32 +412,41 @@ BEGIN
             notes = V_NOTES
         WHERE id = PARAM_SYSTEM_RATE_RULE_ID;
 
-        CALL SP_GET_AUDIT_KEY_FIELD_AND_RATE_MODE(
-            V_KEY_FIELD,
-            'tariff',
-            V_MAPPING_KEY_FIELD,
-            V_RATE_MODE,
-            V_REFERENCE_TABLE
+        SET V_REFERENCE_TABLE = (
+
+            SELECT arp.reference_table 
+            FROM rate_rule_tariff_original r 
+                LEFT JOIN audit_rate_period arp ON r.audit_rate_period_id = arp.id
+            WHERE r.id = PARAM_SYSTEM_RATE_RULE_ID
+            LIMIT 1
+
         );
 
-        SET V_VENDOR_GROUP_ID = FN_GET_TARIFF_VENDOR_GROUP_ID(PARAM_SYSTEM_RATE_RULE_ID);
+        IF( IFNULL(V_SUMMARY_VENDOR_NAME, '') != IFNULL(V_ORIGIN_SUMMARY_VENDOR_NAME, '') OR IFNULL(V_VENDOR_NAME, '') != IFNULL(V_ORIGIN_VENDOR_NAME, '') ) THEN
+            
+            SET V_VENDOR_GROUP_ID = FN_GET_TARIFF_VENDOR_GROUP_ID(PARAM_SYSTEM_RATE_RULE_ID);
+
+            UPDATE audit_reference_mapping
+            SET 
+                vendor_group_id = V_VENDOR_GROUP_ID, 
+                summary_vendor_name = V_SUMMARY_VENDOR_NAME, 
+                vendor_name = V_VENDOR_NAME
+            WHERE id = V_ORIGIN_AUDIT_REFERENCE_MAPPING_ID
+                AND rec_active_flag = 'Y';
+
+        END IF;
 
         UPDATE audit_reference_mapping
         SET 
-        vendor_group_id = V_VENDOR_GROUP_ID, 
-        summary_vendor_name = V_SUMMARY_VENDOR_NAME, 
-        vendor_name = V_VENDOR_NAME, 
-        key_field = V_MAPPING_KEY_FIELD,
-        key_field_original = V_KEY_FIELD, 
-        charge_type = V_CHARGE_TYPE, 
-        usoc = V_USOC, 
-        usoc_description = V_USOC_DESCRIPTION,
-        sub_product = V_SUB_PRODUCT, 
-        line_item_code = V_LINE_ITEM_CODE, 
-        line_item_code_description = V_LINE_ITEM_CODE_DESCRIPTION, 
-        usage_item_type = V_ITEM_TYPE, 
-        item_description = V_ITEM_DESCRIPTIOIN, 
-        modified_timestamp = NOW()
+            charge_type = V_CHARGE_TYPE, 
+            usoc = V_USOC, 
+            usoc_description = V_USOC_DESCRIPTION,
+            sub_product = V_SUB_PRODUCT, 
+            line_item_code = V_LINE_ITEM_CODE, 
+            line_item_code_description = V_LINE_ITEM_CODE_DESCRIPTION, 
+            usage_item_type = V_ITEM_TYPE, 
+            item_description = V_ITEM_DESCRIPTIOIN, 
+            modified_timestamp = NOW()
         WHERE id = V_ORIGIN_AUDIT_REFERENCE_MAPPING_ID
             AND rec_active_flag = 'Y';
 
@@ -459,7 +467,6 @@ BEGIN
                 AND ban_status_id = 1
                 AND master_ban_flag = 'Y'
             LIMIT 1;
-
 
             UPDATE audit_reference_mapping_exclusion
             SET ban_id = V_BAN_ID
@@ -504,7 +511,6 @@ BEGIN
         SET 
             tariff_file_id = V_TARIFF_FILE_ID, 
             name = V_TARIFF_NAME, 
-            rate_mode = V_RATE_MODE,
             multiplier = V_MULTIPLIER, 
             discount = V_DISOCUNT,
             page = V_TARIFF_PAGE, 
