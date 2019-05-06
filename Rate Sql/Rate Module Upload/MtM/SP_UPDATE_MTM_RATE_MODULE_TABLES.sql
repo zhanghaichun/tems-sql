@@ -199,6 +199,7 @@ BEGIN
     WHERE id = PARAM_SYSTEM_RATE_RULE_ID
         AND rec_active_flag = 'Y';
 
+    -- Contrast Fields.
     CONTRAST_FIELDS: BEGIN
 
         IF( IFNULL(V_SUMMARY_VENDOR_NAME, '') != IFNULL(V_ORIGIN_SUMMARY_VENDOR_NAME,'') ) THEN
