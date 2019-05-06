@@ -423,6 +423,7 @@ BEGIN
             FROM audit_reference_mapping
             WHERE id = V_ORIGIN_AUDIT_REFERENCE_MAPPING_ID
                 AND rec_active_flag = 'Y'
+            LIMIT 1
         );
 
         -- Get contract file item count.
@@ -466,7 +467,8 @@ BEGIN
             FROM contract_file
             WHERE contract_number = V_CONTRACT_NAME
                 AND effective_date = V_RATE_EFFECTIVE_DATE
-                AND rec_active_flag = 'Y';
+                AND rec_active_flag = 'Y'
+            LIMIT 1;
 
         END IF;
 
