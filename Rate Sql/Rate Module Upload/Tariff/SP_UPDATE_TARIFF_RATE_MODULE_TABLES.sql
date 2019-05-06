@@ -104,7 +104,6 @@ BEGIN
     UPDATE rate_rule_tariff_original
     SET sync_flag = 'N', modified_timestamp = NOW()
     WHERE id = PARAM_SYSTEM_RATE_RULE_ID;
-
   
     SELECT
         charge_type,
@@ -237,27 +236,7 @@ BEGIN
     -- Contrast Fields
     CONTRAST_FIELDS: BEGIN
 
-        IF( IFNULL(V_CHARGE_TYPE, '') != IFNULL(V_ORIGIN_CHARGE_TYPE, '') ) THEN
-            SET V_UPDATED_FLAG = TRUE;
-            LEAVE CONTRAST_FIELDS;
-        END IF;
-
-        IF( IFNULL(V_KEY_FIELD, '') != IFNULL(V_ORIGIN_KEY_FIELD, '') ) THEN
-            SET V_UPDATED_FLAG = TRUE;
-            LEAVE CONTRAST_FIELDS;
-        END IF;
-
-        IF( IFNULL(V_RATE_EFFECTIVE_DATE, '') != IFNULL(V_ORIGIN_RATE_EFFECTIVE_DATE, '') ) THEN
-            SET V_UPDATED_FLAG = TRUE;
-            LEAVE CONTRAST_FIELDS;
-        END IF;
-
-        IF( IFNULL(V_SUMMARY_VENDOR_NAME, '') != IFNULL(V_ORIGIN_SUMMARY_VENDOR_NAME, '') ) THEN
-            SET V_UPDATED_FLAG = TRUE;
-            LEAVE CONTRAST_FIELDS;
-        END IF;
-
-        IF( IFNULL(V_VENDOR_NAME, '') != IFNULL(V_ORIGIN_VENDOR_NAME, '') ) THEN
+        IF( IFNULL(V_RATE, '') != IFNULL(V_ORIGIN_RATE, '') ) THEN
             SET V_UPDATED_FLAG = TRUE;
             LEAVE CONTRAST_FIELDS;
         END IF;
@@ -282,17 +261,17 @@ BEGIN
             LEAVE CONTRAST_FIELDS;
         END IF;
 
+        IF( IFNULL(V_ITEM_DESCRIPTIOIN, '') != IFNULL(V_ORIGIN_ITEM_DESCRIPTIOIN, '') ) THEN
+            SET V_UPDATED_FLAG = TRUE;
+            LEAVE CONTRAST_FIELDS;
+        END IF;
+
         IF( IFNULL(V_LINE_ITEM_CODE, '') != IFNULL(V_ORIGIN_LINE_ITEM_CODE, '') ) THEN
             SET V_UPDATED_FLAG = TRUE;
             LEAVE CONTRAST_FIELDS;
         END IF;
 
         IF( IFNULL(V_ITEM_TYPE, '') != IFNULL(V_ORIGIN_ITEM_TYPE, '') ) THEN
-            SET V_UPDATED_FLAG = TRUE;
-            LEAVE CONTRAST_FIELDS;
-        END IF;
-
-        IF( IFNULL(V_ITEM_DESCRIPTIOIN, '') != IFNULL(V_ORIGIN_ITEM_DESCRIPTIOIN, '') ) THEN
             SET V_UPDATED_FLAG = TRUE;
             LEAVE CONTRAST_FIELDS;
         END IF;
@@ -327,11 +306,6 @@ BEGIN
             LEAVE CONTRAST_FIELDS;
         END IF;
 
-        IF( IFNULL(V_RATE, '') != IFNULL(V_ORIGIN_RATE, '') ) THEN
-            SET V_UPDATED_FLAG = TRUE;
-            LEAVE CONTRAST_FIELDS;
-        END IF;
-
         IF( IFNULL(V_RULES_DETAILS, '') != IFNULL(V_ORIGIN_RULES_DETAILS, '') ) THEN
             SET V_UPDATED_FLAG = TRUE;
             LEAVE CONTRAST_FIELDS;
@@ -362,6 +336,26 @@ BEGIN
             LEAVE CONTRAST_FIELDS;
         END IF;
 
+        IF( IFNULL(V_CHARGE_TYPE, '') != IFNULL(V_ORIGIN_CHARGE_TYPE, '') ) THEN
+            SET V_UPDATED_FLAG = TRUE;
+            LEAVE CONTRAST_FIELDS;
+        END IF;
+
+        IF( IFNULL(V_RATE_EFFECTIVE_DATE, '') != IFNULL(V_ORIGIN_RATE_EFFECTIVE_DATE, '') ) THEN
+            SET V_UPDATED_FLAG = TRUE;
+            LEAVE CONTRAST_FIELDS;
+        END IF;
+
+        IF( IFNULL(V_SUMMARY_VENDOR_NAME, '') != IFNULL(V_ORIGIN_SUMMARY_VENDOR_NAME, '') ) THEN
+            SET V_UPDATED_FLAG = TRUE;
+            LEAVE CONTRAST_FIELDS;
+        END IF;
+
+        IF( IFNULL(V_VENDOR_NAME, '') != IFNULL(V_ORIGIN_VENDOR_NAME, '') ) THEN
+            SET V_UPDATED_FLAG = TRUE;
+            LEAVE CONTRAST_FIELDS;
+        END IF;
+
         IF( IFNULL(V_EXCLUSION_BAN, '') != IFNULL(V_ORIGIN_EXCUSION_BAN, '') ) THEN
             SET V_UPDATED_FLAG = TRUE;
             LEAVE CONTRAST_FIELDS;
@@ -373,6 +367,11 @@ BEGIN
         END IF;
 
         IF( IFNULL(V_NOTES, '') != IFNULL(V_ORIGIN_NOTES, '') ) THEN
+            SET V_UPDATED_FLAG = TRUE;
+            LEAVE CONTRAST_FIELDS;
+        END IF;
+
+        IF( IFNULL(V_KEY_FIELD, '') != IFNULL(V_ORIGIN_KEY_FIELD, '') ) THEN
             SET V_UPDATED_FLAG = TRUE;
             LEAVE CONTRAST_FIELDS;
         END IF;
