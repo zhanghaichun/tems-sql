@@ -180,7 +180,7 @@ BEGIN
     WHERE batch_no = PARAM_BATCH_NO
         AND rate_id = PARAM_SYSTEM_RATE_RULE_ID;
 
-    -- Query original data inside master table.
+    -- Query original data.
     SELECT
         audit_reference_mapping_id,
         audit_rate_period_id,
@@ -350,7 +350,7 @@ BEGIN
 
     END CONTRAST_FIELDS;
 
-    -- Executing the different actions based on updated flag.
+    -- Executing the actions if there are some differents.
     IF(V_UPDATED_FLAG = TRUE) THEN
 
         -- Update contract rule master table.
@@ -392,6 +392,8 @@ BEGIN
 
         IF ( IFNULL(V_SUMMARY_VENDOR_NAME, '') != IFNULL(V_ORIGIN_SUMMARY_VENDOR_NAME,'') ) THEN
 
+            -- If vendor name is changed, update vendor_group_id and vendor name field.
+
             SET V_VENDOR_GROUP_ID = FN_GET_CONTRACT_VENDOR_GROUP_ID(PARAM_SYSTEM_RATE_RULE_ID);
 
             UPDATE audit_reference_mapping
@@ -418,6 +420,7 @@ BEGIN
         WHERE id = V_ORIGIN_AUDIT_REFERENCE_MAPPING_ID
             AND rec_active_flag = 'Y';
 
+        -- Get contract rate rule record id.
         SET V_CONTRACT_ID = (
             SELECT audit_reference_id
             FROM audit_reference_mapping
@@ -433,7 +436,10 @@ BEGIN
             AND effective_date = V_RATE_EFFECTIVE_DATE
             AND rec_active_flag = 'Y';
 
+        -- Update contract_file table.
         IF (V_CONTRACT_FILE_ITEM_COUNT = 0) THEN
+
+            -- If the contract name is not exists in contract_file table. 
 
             INSERT INTO contract_file(
                 contract_number,
@@ -472,6 +478,7 @@ BEGIN
 
         END IF;
 
+        -- Update contract table.
         UPDATE contract
         SET 
             contract_file_id = V_CONTRACT_FILE_ID, 
@@ -479,13 +486,14 @@ BEGIN
             schedule = V_CONTRACT_SERVICE_SCHEDULE_NAME,
             mmbc = V_MMBC,
             discount = V_DISOCUNT,
-            -- rate_mode = V_RATE_MODE, 
             modified_timestamp = NOW()
         WHERE id = V_CONTRACT_ID
             AND rec_active_flag = 'Y';
 
+        -- Update audit_rate_period table.
         IF(V_REFERENCE_TABLE = 'contract') THEN
 
+            -- Get count of inactive record.
             SELECT COUNT(1) INTO V_AUDIT_PERIOD_ITEM_COUNT
             FROM audit_rate_period
             WHERE reference_table = 'contract'
@@ -530,8 +538,9 @@ BEGIN
             END IF;
 
         ELSEIF(V_REFERENCE_TABLE = 'contract_rate_by_quantity') THEN
-
-          
+            
+            -- First, update the quantity.
+            
             SELECT reference_id INTO V_CONTRACT_RATE_BY_QUANTITY_ID
             FROM audit_rate_period
             WHERE id = V_ORIGIN_AUDIT_RATE_PERIOD_ID

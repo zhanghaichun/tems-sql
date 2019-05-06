@@ -375,6 +375,7 @@ BEGIN
                 WHERE id = V_ORIGIN_AUDIT_RATE_PERIOD_ID
                     AND rec_active_flag = 'Y';
 
+                -- Query previous record.
                 SELECT start_date INTO V_START_DATE
                 FROM audit_rate_period
                 WHERE rec_active_flag = 'Y'
@@ -385,6 +386,7 @@ BEGIN
                 ORDER BY start_date DESC
                 LIMIT 1;
 
+                -- Update end_date of previous record.
                 UPDATE audit_rate_period
                 SET end_date = DATE_SUB(V_RATE_EFFECTIVE_DATE, INTERVAL 1 DAY)
                 WHERE rec_active_flag = 'Y'

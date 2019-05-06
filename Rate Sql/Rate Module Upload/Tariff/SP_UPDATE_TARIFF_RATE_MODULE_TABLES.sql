@@ -568,6 +568,7 @@ BEGIN
 
         ELSEIF(V_REFERENCE_TABLE = 'tariff_rate_by_quantity') THEN
 
+            -- Get record id of tariff_rate_by_quantity table.
             SELECT reference_id INTO V_TARIFF_RATE_BY_QUANTITY_ID
             FROM audit_rate_period
             WHERE id = V_ORIGIN_AUDIT_RATE_PERIOD_ID
@@ -626,7 +627,6 @@ BEGIN
 
             END IF;
 
-          
         END IF;
 
         UPDATE rate_rule_tariff_original
