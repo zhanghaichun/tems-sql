@@ -174,98 +174,98 @@ BEGIN
             AND audit_reference_type_id = 3
             AND circuit_number = V_STRIPPED_CIRCUIT_NUMBER
             AND (
-            CASE
-            WHEN V_SUMMARY_VENDOR_NAME IS NOT NULL THEN
-              summary_vendor_name = V_SUMMARY_VENDOR_NAME
-            ELSE
-              summary_vendor_name IS NULL
-            END
+                CASE
+                    WHEN V_SUMMARY_VENDOR_NAME IS NOT NULL THEN
+                      summary_vendor_name = V_SUMMARY_VENDOR_NAME
+                    ELSE
+                      summary_vendor_name IS NULL
+                END
             )
             AND rec_active_flag = 'Y';
 
     ELSEIF (PARAM_AUDIT_KEY_FIELD = CONST_STRIPPED_CIRCUIT_NUMBER_ITEM_DESCRIPTION_KEY) THEN
 
-    SELECT 
-    COUNT(1), 
-    id
-    INTO 
-    PARAM_MAPPING_ITEM_COUNT,
-    PARAM_MAPPING_ITEM_ID
-    FROM audit_reference_mapping
-    WHERE 1 = 1
-    AND audit_reference_type_id = 3
-    AND circuit_number = V_STRIPPED_CIRCUIT_NUMBER
-    AND item_description = V_ITEM_DESCRIPTIOIN
-    AND (
-    CASE
-    WHEN V_SUMMARY_VENDOR_NAME IS NOT NULL THEN
-      summary_vendor_name = V_SUMMARY_VENDOR_NAME
-    ELSE
-      summary_vendor_name IS NULL
-    END
-    )
-    AND rec_active_flag = 'Y';
+        SELECT 
+            COUNT(1), 
+            id
+                INTO 
+                    PARAM_MAPPING_ITEM_COUNT,
+                    PARAM_MAPPING_ITEM_ID
+        FROM audit_reference_mapping
+        WHERE 1 = 1
+            AND audit_reference_type_id = 3
+            AND circuit_number = V_STRIPPED_CIRCUIT_NUMBER
+            AND item_description = V_ITEM_DESCRIPTIOIN
+            AND (
+                CASE
+                    WHEN V_SUMMARY_VENDOR_NAME IS NOT NULL THEN
+                      summary_vendor_name = V_SUMMARY_VENDOR_NAME
+                    ELSE
+                      summary_vendor_name IS NULL
+                END
+            )
+            AND rec_active_flag = 'Y';
 
     ELSEIF (PARAM_AUDIT_KEY_FIELD = CONST_STRIPPED_CIRCUIT_NUMBER_LINE_ITEM_CODE_DESCRIPTION_KEY) THEN
 
-    SELECT 
-    COUNT(1), 
-    id
-    INTO 
-    PARAM_MAPPING_ITEM_COUNT,
-    PARAM_MAPPING_ITEM_ID
-    FROM audit_reference_mapping
-    WHERE 1 = 1
-    AND audit_reference_type_id = 3
-    AND circuit_number = V_STRIPPED_CIRCUIT_NUMBER
-    AND line_item_code_description = V_LINE_ITEM_CODE_DESCRIPTION
-    AND (
-    CASE
-    WHEN V_SUMMARY_VENDOR_NAME IS NOT NULL THEN
-      summary_vendor_name = V_SUMMARY_VENDOR_NAME
-    ELSE
-      summary_vendor_name IS NULL
-    END
-    )
-    AND rec_active_flag = 'Y';
+        SELECT 
+            COUNT(1), 
+            id
+                INTO 
+                    PARAM_MAPPING_ITEM_COUNT,
+                    PARAM_MAPPING_ITEM_ID
+        FROM audit_reference_mapping
+        WHERE 1 = 1
+            AND audit_reference_type_id = 3
+            AND circuit_number = V_STRIPPED_CIRCUIT_NUMBER
+            AND line_item_code_description = V_LINE_ITEM_CODE_DESCRIPTION
+            AND (
+                CASE
+                    WHEN V_SUMMARY_VENDOR_NAME IS NOT NULL THEN
+                      summary_vendor_name = V_SUMMARY_VENDOR_NAME
+                    ELSE
+                      summary_vendor_name IS NULL
+                END
+            )
+            AND rec_active_flag = 'Y';
 
     ELSEIF (PARAM_AUDIT_KEY_FIELD = CONST_STRIPPED_CIRCUIT_NUMBER_LINE_ITEM_CODE_KEY) THEN
 
-    SELECT 
-    COUNT(1), 
-    id
-    INTO 
-    PARAM_MAPPING_ITEM_COUNT,
-    PARAM_MAPPING_ITEM_ID
-    FROM audit_reference_mapping
-    WHERE 1 = 1
-    AND audit_reference_type_id = 3
-    AND circuit_number = V_STRIPPED_CIRCUIT_NUMBER
-    AND line_item_code = V_LINE_ITEM_CODE
-    AND (
-    CASE
-    WHEN V_SUMMARY_VENDOR_NAME IS NOT NULL THEN
-      summary_vendor_name = V_SUMMARY_VENDOR_NAME
-    ELSE
-      summary_vendor_name IS NULL
-    END
-    )
-    AND rec_active_flag = 'Y';
+        SELECT 
+            COUNT(1), 
+            id
+                INTO 
+                    PARAM_MAPPING_ITEM_COUNT,
+                    PARAM_MAPPING_ITEM_ID
+        FROM audit_reference_mapping
+        WHERE 1 = 1
+            AND audit_reference_type_id = 3
+            AND circuit_number = V_STRIPPED_CIRCUIT_NUMBER
+            AND line_item_code = V_LINE_ITEM_CODE
+            AND (
+                CASE
+                    WHEN V_SUMMARY_VENDOR_NAME IS NOT NULL THEN
+                      summary_vendor_name = V_SUMMARY_VENDOR_NAME
+                    ELSE
+                      summary_vendor_name IS NULL
+                END
+            )
+            AND rec_active_flag = 'Y';
 
     ELSEIF (PARAM_AUDIT_KEY_FIELD = CONST_CVPP_KEY) THEN
 
-    SELECT 
-    COUNT(1), 
-    id
-    INTO 
-    PARAM_MAPPING_ITEM_COUNT,
-    PARAM_MAPPING_ITEM_ID
-    FROM audit_reference_mapping
-    WHERE 1 = 1
-    AND audit_reference_type_id = 3
-    AND summary_vendor_name = V_SUMMARY_VENDOR_NAME
-    AND key_field = 'cvpp'
-    AND rec_active_flag = 'Y';
+        SELECT 
+            COUNT(1), 
+            id
+                INTO 
+                    PARAM_MAPPING_ITEM_COUNT,
+                    PARAM_MAPPING_ITEM_ID
+        FROM audit_reference_mapping
+        WHERE 1 = 1
+            AND audit_reference_type_id = 3
+            AND summary_vendor_name = V_SUMMARY_VENDOR_NAME
+            AND key_field LIKE '%cvpp%'
+            AND rec_active_flag = 'Y';
 
     END IF;
 
