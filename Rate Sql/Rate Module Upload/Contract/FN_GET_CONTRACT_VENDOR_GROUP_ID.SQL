@@ -5,7 +5,11 @@ BEGIN
   
     /**
      * Return vendor_group_id
+<<<<<<< HEAD
      * local modified
+=======
+     * remote modified
+>>>>>>> master
      */
 
     DECLARE V_SUMMARY_VENDOR_NAME VARCHAR(128);
