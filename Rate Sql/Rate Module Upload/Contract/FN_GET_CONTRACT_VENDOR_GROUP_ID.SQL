@@ -5,6 +5,8 @@ BEGIN
   
     /**
      * Return vendor_group_id
+     *
+     * this is another persons commit
      */
 
     DECLARE V_SUMMARY_VENDOR_NAME VARCHAR(128);
