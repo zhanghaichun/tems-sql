@@ -7,7 +7,11 @@ CREATE PROCEDURE SP_GET_MTM_MAPPING_RECORD_ID(
 )
 
 BEGIN 
-  
+    
+    /**
+     * Get Month to Month mapping id.
+     */
+
     DECLARE V_SUMMARY_VENDOR_NAME VARCHAR(128);
     DECLARE V_USOC VARCHAR(16);
     DECLARE V_USOC_DESCRIPTION VARCHAR(255);
@@ -53,8 +57,8 @@ BEGIN
             COUNT(1), 
             id
                 INTO 
-                PARAM_MAPPING_ITEM_COUNT,
-                PARAM_MAPPING_ITEM_ID
+                    PARAM_MAPPING_ITEM_COUNT,
+                    PARAM_MAPPING_ITEM_ID
         FROM audit_reference_mapping
         WHERE 1 = 1
             AND audit_reference_type_id = 18
