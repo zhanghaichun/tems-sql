@@ -346,136 +346,142 @@ BEGIN
 
                 IF(V_RATE_MODE = 'rate_any') THEN
 
-                  /**
-                   * 对于 rate_any 类型的记录， 同一个 tariff 可以有多个 'Active' 状态的记录。
-                   * TODO: 还需要考虑 rate effective date.
-                   */
-                  SELECT COUNT(1) INTO V_AUDIT_RATE_PERIOD_RATE_ANY_ITEM_COUNT
-                  FROM audit_rate_period
-                  WHERE 1 = 1
-                    AND reference_table = 'tariff'
-                    AND reference_id = V_TARIFF_ID
-                    AND start_date = V_RATE_EFFECTIVE_DATE
-                    AND rate = V_RATE
-                    AND rec_active_flag = 'Y';
-
-                  IF(V_AUDIT_RATE_PERIOD_RATE_ANY_ITEM_COUNT = 0) THEN
-
-                    SELECT start_date INTO V_START_DATE
+                    SELECT COUNT(1) INTO V_AUDIT_RATE_PERIOD_RATE_ANY_ITEM_COUNT
                     FROM audit_rate_period
                     WHERE 1 = 1
-                      AND reference_table = 'tariff'
-                      AND reference_id = V_TARIFF_ID
-                      AND end_date IS NULL
-                      AND rec_active_flag = 'Y'
-                    LIMIT 1;
-
-                    IF (V_RATE_EFFECTIVE_DATE > V_START_DATE) THEN
-
-                      /**
-                       * 先更新 end_date
-                       */
-                      UPDATE audit_rate_period
-                      SET end_date = DATE_SUB(V_RATE_EFFECTIVE_DATE, INTERVAL 1 DAY)
-                      WHERE reference_table = 'tariff'
-                        AND reference_id = V_TARIFF_ID
-                        AND end_date IS NULL;
-
-                      /**
-                       * 再插入最新的一条记录。
-                       */
-                      INSERT INTO audit_rate_period(
-                          reference_table, 
-                          reference_id,
-                          start_date,
-                          end_date,
-                          rate,
-                          rules_details
-                        )
-                      VALUES(
-                          'tariff',
-                          V_TARIFF_ID,
-                          V_RATE_EFFECTIVE_DATE,
-                          NULL,
-                          V_RATE,
-                          V_RULES_DETAILS
-                        );
-
-                      SET V_AUDIT_RATE_PERIOD_ID = (
-                          SELECT MAX(id) FROM audit_rate_period
-                        );
-
-                      UPDATE rate_rule_tariff_original
-                      SET audit_rate_period_id = V_AUDIT_RATE_PERIOD_ID
-                      WHERE id = V_TABLE_ID;
-
-                    ELSEIF (V_RATE_EFFECTIVE_DATE < V_START_DATE) THEN
-
-                      SELECT start_date INTO V_START_DATE
-                      FROM audit_rate_period
-                      WHERE 1 = 1
                         AND reference_table = 'tariff'
                         AND reference_id = V_TARIFF_ID
-                        AND start_date > V_RATE_EFFECTIVE_DATE
-                        AND rec_active_flag = 'Y'
-                      ORDER BY start_date 
-                      LIMIT 1;
+                        AND start_date = V_RATE_EFFECTIVE_DATE
+                        AND rate = V_RATE
+                        AND rec_active_flag = 'Y';
 
-                      INSERT INTO audit_rate_period(
-                          reference_table, 
-                          reference_id,
-                          start_date,
-                          end_date,
-                          rate,
-                          rules_details
-                        )
-                      VALUES(
-                          'tariff',
-                          V_TARIFF_ID,
-                          V_RATE_EFFECTIVE_DATE,
-                          DATE_SUB(V_START_DATE, INTERVAL 1 DAY),
-                          V_RATE,
-                          V_RULES_DETAILS
-                        );
+                    IF(V_AUDIT_RATE_PERIOD_RATE_ANY_ITEM_COUNT = 0) THEN
 
-                      SET V_AUDIT_RATE_PERIOD_ID = (
-                          SELECT MAX(id) FROM audit_rate_period
-                        );
+                        SELECT start_date INTO V_START_DATE
+                        FROM audit_rate_period
+                        WHERE 1 = 1
+                            AND reference_table = 'tariff'
+                            AND reference_id = V_TARIFF_ID
+                            AND end_date IS NULL
+                            AND rec_active_flag = 'Y'
+                        LIMIT 1;
 
-                      UPDATE rate_rule_tariff_original
-                      SET audit_rate_period_id = V_AUDIT_RATE_PERIOD_ID
-                      WHERE id = V_TABLE_ID;
+                        IF (V_RATE_EFFECTIVE_DATE > V_START_DATE) THEN
 
-                    ELSE
+                            UPDATE audit_rate_period
+                            SET end_date = DATE_SUB(V_RATE_EFFECTIVE_DATE, INTERVAL 1 DAY)
+                            WHERE reference_table = 'tariff'
+                                AND reference_id = V_TARIFF_ID
+                                AND end_date IS NULL;
 
-                      INSERT INTO audit_rate_period(
-                          reference_table, 
-                          reference_id,
-                          start_date,
-                          end_date,
-                          rate,
-                          rules_details
-                        )
-                      VALUES(
-                          'tariff',
-                          V_TARIFF_ID,
-                          V_RATE_EFFECTIVE_DATE,
-                          NULL,
-                          V_RATE,
-                          V_RULES_DETAILS
-                        );
+                            INSERT INTO audit_rate_period(
+                                reference_table, 
+                                reference_id,
+                                start_date,
+                                end_date,
+                                rate,
+                                rules_details
+                            )
+                            VALUES(
+                                'tariff',
+                                V_TARIFF_ID,
+                                V_RATE_EFFECTIVE_DATE,
+                                NULL,
+                                V_RATE,
+                                V_RULES_DETAILS
+                            );
 
-                      SET V_AUDIT_RATE_PERIOD_ID = (
-                          SELECT MAX(id) FROM audit_rate_period
-                        );
+                            SET V_AUDIT_RATE_PERIOD_ID = (
+                                SELECT MAX(id) FROM audit_rate_period
+                            );
 
-                      UPDATE rate_rule_tariff_original
-                      SET audit_rate_period_id = V_AUDIT_RATE_PERIOD_ID
-                      WHERE id = V_TABLE_ID;
+                            UPDATE rate_rule_tariff_original
+                            SET audit_rate_period_id = V_AUDIT_RATE_PERIOD_ID
+                            WHERE id = V_TABLE_ID;
+
+                        ELSEIF (V_RATE_EFFECTIVE_DATE < V_START_DATE) THEN
+
+                            SELECT start_date INTO V_START_DATE
+                            FROM audit_rate_period
+                            WHERE 1 = 1
+                                AND reference_table = 'tariff'
+                                AND reference_id = V_TARIFF_ID
+                                AND start_date > V_RATE_EFFECTIVE_DATE
+                                AND rec_active_flag = 'Y'
+                            ORDER BY start_date 
+                            LIMIT 1;
+
+                            INSERT INTO audit_rate_period(
+                                reference_table, 
+                                reference_id,
+                                start_date,
+                                end_date,
+                                rate,
+                                rules_details
+                            )
+                            VALUES(
+                                'tariff',
+                                V_TARIFF_ID,
+                                V_RATE_EFFECTIVE_DATE,
+                                DATE_SUB(V_START_DATE, INTERVAL 1 DAY),
+                                V_RATE,
+                                V_RULES_DETAILS
+                            );
+
+                            SET V_AUDIT_RATE_PERIOD_ID = (
+                                SELECT MAX(id) FROM audit_rate_period
+                            );
+
+                            UPDATE rate_rule_tariff_original
+                            SET audit_rate_period_id = V_AUDIT_RATE_PERIOD_ID
+                            WHERE id = V_TABLE_ID;
+
+                        ELSE
+
+                            INSERT INTO audit_rate_period(
+                                reference_table, 
+                                reference_id,
+                                start_date,
+                                end_date,
+                                rate,
+                                rules_details
+                            )
+                            VALUES(
+                                'tariff',
+                                V_TARIFF_ID,
+                                V_RATE_EFFECTIVE_DATE,
+                                NULL,
+                                V_RATE,
+                                V_RULES_DETAILS
+                            );
+
+                            SET V_AUDIT_RATE_PERIOD_ID = (
+                                SELECT MAX(id) FROM audit_rate_period
+                            );
+
+                            UPDATE rate_rule_tariff_original
+                            SET audit_rate_period_id = V_AUDIT_RATE_PERIOD_ID
+                            WHERE id = V_TABLE_ID;
+
+                        END IF;
+
+                    ELSE 
+
+                        SELECT id INTO V_AUDIT_RATE_PERIOD_ID
+                        FROM audit_rate_period
+                        WHERE 1 = 1
+                            AND reference_table = 'tariff'
+                            AND reference_id = V_TARIFF_ID
+                            AND start_date = V_RATE_EFFECTIVE_DATE
+                            AND rate = V_RATE
+                            AND rec_active_flag = 'Y'
+                        LIMIT 1;
+
+                        UPDATE rate_rule_tariff_original
+                        SET audit_rate_period_id = V_AUDIT_RATE_PERIOD_ID
+                        WHERE id = V_TABLE_ID;
 
                     END IF;
-
-                  END IF;
 
                 ELSE
 

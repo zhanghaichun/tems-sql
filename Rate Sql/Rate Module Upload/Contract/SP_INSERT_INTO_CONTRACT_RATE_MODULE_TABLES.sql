@@ -451,7 +451,7 @@ BEGIN
                             )
                             VALUES(
                                 'contract',
-                                V_TARIFF_ID,
+                                V_CONTRACT_ID,
                                 V_RATE_EFFECTIVE_DATE,
                                 DATE_SUB(V_START_DATE, INTERVAL 1 DAY),
                                 V_RATE
