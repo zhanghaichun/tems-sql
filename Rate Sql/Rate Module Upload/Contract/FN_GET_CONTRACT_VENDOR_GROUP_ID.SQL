@@ -6,7 +6,7 @@ BEGIN
     /**
      * Return vendor_group_id
      *
-     * This is a new begining.
+     * This is a new begining. master begining
      */
 
     DECLARE V_SUMMARY_VENDOR_NAME VARCHAR(128);
