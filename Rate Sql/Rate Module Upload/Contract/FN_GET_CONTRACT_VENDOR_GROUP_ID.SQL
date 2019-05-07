@@ -5,7 +5,7 @@ BEGIN
   
     /**
      * Return vendor_group_id
-     * local
+     * This is test branch
      */
 
     DECLARE V_SUMMARY_VENDOR_NAME VARCHAR(128);
