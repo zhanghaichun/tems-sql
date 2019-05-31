@@ -121,37 +121,51 @@ SELECT
 FROM
   tariff t
 LEFT JOIN (
-  SELECT
-    t.id AS tariff_id,
-    'tariff' AS reference_table,
-    t.id AS reference_id
-  FROM
-    tariff t
-  WHERE
-    t.rate_mode NOT IN (
-      'tariff_rate_by_quantity',
-      'tariff_rate_by_quantity_base_amount',
-      'tariff_rate_by_quantity_rate_max'
-    )
-  UNION
+
     SELECT
-      t.id AS tariff_id,
-      'tariff_rate_by_quantity' AS reference_table,
-      trbq.id AS reference_id
-    FROM
-      tariff t
-    LEFT JOIN tariff_rate_by_quantity trbq ON trbq.tariff_id = t.id
-    WHERE
-      t.rate_mode IN (
+        t.id AS tariff_id,
+        'tariff' AS reference_table,
+        t.id AS reference_id
+    FROM tariff t
+    WHERE t.rate_mode NOT IN (
         'tariff_rate_by_quantity',
         'tariff_rate_by_quantity_base_amount',
         'tariff_rate_by_quantity_rate_max'
-      )
+    )
+
+    UNION
+
+    SELECT
+        t.id AS tariff_id,
+        'tariff_rate_by_quantity' AS reference_table,
+        trbq.id AS reference_id
+    FROM tariff t
+    LEFT JOIN tariff_rate_by_quantity trbq ON trbq.tariff_id = t.id
+    WHERE t.rate_mode IN (
+        'tariff_rate_by_quantity',
+        'tariff_rate_by_quantity_base_amount',
+        'tariff_rate_by_quantity_rate_max'
+    )
+
+    UNION
+
+    SELECT
+        t.id AS tariff_id,
+        'tariff_rate_by_bill_keep' AS reference_table,
+        trbq.id AS reference_id
+    FROM tariff t
+    LEFT JOIN tariff_rate_by_bill_keep trbq ON trbq.tariff_id = t.id
+    WHERE t.rate_mode = 'tariff_rate_by_bill_keep'
+
 ) refer ON t.id = tariff_id
 LEFT JOIN tariff_file tf ON t.tariff_file_id = tf.id
 LEFT JOIN tariff_rate_by_quantity trbq ON (
   refer.reference_id = trbq.id
   AND refer.reference_table = 'tariff_rate_by_quantity'
+)
+LEFT JOIN tariff_rate_by_bill_keep trbk ON (
+  refer.reference_id = trbk.id
+  AND refer.reference_table = 'tariff_rate_by_bill_keep'
 )
 LEFT JOIN audit_reference_mapping arm ON (
   arm.audit_reference_id = t.id
