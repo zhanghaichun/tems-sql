@@ -1,0 +1,38 @@
+DROP FUNCTION IF EXISTS FN_GET_RATE_MODE;
+CREATE FUNCTION FN_GET_RATE_MODE(
+    PARAM_AUDIT_REFERENCE_TYPE_ID INT,
+    PARAM_AUDIT_REFERENCE_ID INT
+) RETURNS VARCHAR(64)
+
+
+BEGIN 
+    
+    DECLARE V_RETE_MODE VARCHAR(64);
+
+    IF  PARAM_AUDIT_REFERENCE_TYPE_ID = 2 THEN
+
+        SET V_RETE_MODE = (
+                SELECT rate_mode FROM tariff
+                WHERE id = PARAM_AUDIT_REFERENCE_ID
+            );
+
+    ELSEIF PARAM_AUDIT_REFERENCE_TYPE_ID = 3 THEN
+
+        SET V_RETE_MODE = (
+                SELECT rate_mode FROM contract
+                WHERE id = PARAM_AUDIT_REFERENCE_ID
+            );
+
+    ELSEIF PARAM_AUDIT_REFERENCE_TYPE_ID = 3 THEN
+
+        SET V_RETE_MODE = (
+                SELECT rate_mode FROM audit_mtm
+                WHERE id = PARAM_AUDIT_REFERENCE_ID
+            );
+
+    END IF;
+
+    RETURN V_RETE_MODE;
+
+
+END;
