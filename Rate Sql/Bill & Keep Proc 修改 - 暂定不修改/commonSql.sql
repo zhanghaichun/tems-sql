@@ -1,14 +1,7 @@
 
--- 向 rate_rule_tariff_original 表中加 3 个字段
--- ban_id， imbalance_start， imbalance_end
-alter table rate_rule_tariff_original
-add ban_id int after quantity_end,
-add imbalance_start double(20, 5) after ban_id,
-add imbalance_end double(20, 5) after imbalance_start;
-
-alter table rate_rule_tariff_original
-add province varchar(16) after imbalance_end,
-add provider varchar(64) after province;
+-- 新加的字段
+-- bill_keep_ban_id, bill_keep_ban, province, provider,
+-- imbalance_start, imbalance_end
 
 -- 修改不规则的 tariff file
 update tariff_file
@@ -25,7 +18,6 @@ update tariff_file
 set tariff_name = 'SaskTel CAT/21414' -- 系统数据库中包含这条记录 tariff_file_id = 41
 where tariff_name = 'SaskTel COMPETITOR ACCESS TARIFF CRTC 21414'
 	and id = 52;
-
 
 update tariff_file
 set tariff_name = 'TELUS CAT/1017'
@@ -193,14 +185,69 @@ where t.rec_active_flag ='Y'
 	and t.trunk_start = b.trunk_start
 	and t.trunk_end = b.trunk_end;
 
--- 查询 bill keep 的 charge type，发现有多种情况。
-select DISTINCT p.item_type_id from audit_result ar
-left join proposal p on p.id = ar.proposal_id 
-where audit_source_id between 10001 and 10004
-order by ar.id DESC
-limit 200;
+-- 通过导出 excel来整理 tariff_rate_by_bill_keep 表中的数据
+-- 和 audit_rate_period 表中的数据
 
-select arp.* from tariff t
+update tariff_rate_by_bill_keep
+set trunk_end = null
+where trunk_start = 97
+	and trunk_end = 97;
+
+insert into rate_rule_tariff_original(
+	`audit_reference_mapping_id`,
+	`bill_keep_ban_id`,
+	`audit_rate_period_id`,
+	`key_field`,
+	`rate_effective_date`,
+	`summary_vendor_name`,
+	`vendor_name`,
+	`province`,
+	`provider`,
+	`imbalance_start`,
+	`imbalance_end`,
+	`quantity_begin`,
+	`quantity_end`,
+	`tariff_file_name`,
+	`tariff_name`,
+	`rate`,
+	`tariff_page`,
+	`part_section`,
+	`item_number`,
+	`crtc_number`
+)
+
+select 
+	arm.id as auditReferenceMappingId,
+	arm.ban_id,
+	arp.id as auditRatePeriodId,
+	arm.key_field_original AS keyField,
+	arp.start_date AS rateEffectiveDate,
+	arm.summary_vendor_name AS summaryVendorName,
+	arm.vendor_name AS vendorName,
+	tr.province,
+	tr.provider,
+	tr.imbalance_start,
+	tr.imbalance_end,
+	tr.trunk_start AS quantityBegin,
+	tr.trunk_end AS quantityEnd,
+	tf.tariff_name,
+	t.name AS contractNumberOrTariffReference,
+	arp.rate AS rate,
+	t.page AS tariffPage,
+	t.part_section AS partOrSection,
+	t.item_number AS itemNumber,
+	SUBSTRING(
+		tf.tariff_name,
+		INSTR(
+		  tf.tariff_name,
+		  TRIM(
+		    REVERSE(
+		      - (- REVERSE(tf.tariff_name))
+		    )
+		  )
+		)
+	) AS crtcNumber
+from tariff t
 left join tariff_file tf on t.tariff_file_id = tf.id
 left join audit_reference_mapping arm on t.id = arm.audit_reference_id
 left join tariff_rate_by_bill_keep tr on tr.tariff_id = arm.audit_reference_id
@@ -208,10 +255,19 @@ left join audit_rate_period arp on tr.id = arp.reference_id
 where arm.audit_reference_type_id = 2
 	and arp.reference_table = 'tariff_rate_by_bill_keep'
 	and arm.key_field = 'bill_keep_ban'
+	and t.rate_mode = 'tariff_rate_by_bill_keep'
 	and arp.rec_active_flag = 'Y'
 	and arm.rec_active_flag = 'Y'
 	and tr.rec_active_flag = 'Y'
 	and t.rec_active_flag = 'Y';
+
+-- 更新 bill_keep_ban 字段。
+update rate_rule_tariff_original r
+set bill_keep_ban = (
+	select account_number from ban
+	where id = r.bill_keep_ban_id
+)
+where r.bill_keep_ban_id is not null;
 
 
 select * from tariff_rate_by_bill_keep;
@@ -219,3 +275,5 @@ select * from tariff_rate_by_bill_keep;
 -- 添加 key field.
 insert into audit_key_field (audit_reference_type_id,key_field_original,key_field,rate_mode,reference_table) 
 VALUES(2, 'Bill & Keep', 'bill_keep_ban', 'tariff_rate_by_bill_keep', 'tariff_rate_by_bill_keep'); 
+
+
