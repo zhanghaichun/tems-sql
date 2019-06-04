@@ -1,5 +1,6 @@
 DROP PROCEDURE IF EXISTS ccm_db.SP_RATE_VERIFICATION;
 CREATE PROCEDURE ccm_db.`SP_RATE_VERIFICATION`(V_BATCH_NO VARCHAR(64))
+
 BEGIN
   
   DECLARE V_COUNT INT;
@@ -69,9 +70,14 @@ BEGIN
 	DECLARE V_REFERENCE_TABLE VARCHAR(128);
 	DECLARE V_REFERENCE_ID INT;
 	DECLARE V_INACTIVE_MAX_EFFECTIVE_DATE VARCHAR(128);
-	DECLARE V_ACTIVE_EFFECTIVE_DATE VARCHAR(128);
   DECLARE V_IS_NUMERICAL INT;
   DECLARE V_IS_DATE INT;
+
+	DECLARE 	V_BILL_KEEP_BAN VARCHAR(64);
+	DECLARE 	V_PROVINCE VARCHAR(16);
+	DECLARE 	V_PROVIDER VARCHAR(64);
+	DECLARE 	V_IMBALANCE_START	VARCHAR(64);
+	DECLARE 	V_IMBALANCE_END	VARCHAR(64);
 
 
 	/*DECLARE cur_vendor_item CURSOR FOR
@@ -132,7 +138,12 @@ BEGIN
 						IFNULL(discount,''),
 						IFNULL(exclusion_ban,''),
 						IFNULL(exclusion_item_descripton,''),
-						IFNULL(notes,'')
+						IFNULL(notes,''),
+						IFNULL(bill_keep_ban,''),
+						IFNULL(province,''),
+						IFNULL(provider,''),
+						IFNULL(imbalance_start,''),
+						IFNULL(imbalance_end,'')
         FROM rate_rule_tariff_master_import t
         where t.batch_no = V_BATCH_NO;
   DECLARE CONTINUE HANDLER FOR NOT FOUND SET V_NOTFOUND = TRUE;
@@ -174,7 +185,12 @@ BEGIN
 						V_DISCOUNT,
 						V_EXCLUSION_BAN,
 						V_EXCLUSION_ITEM_DESCRIPTON,
-						V_NOTES;
+						V_NOTES,
+						V_BILL_KEEP_BAN,
+						V_PROVINCE,
+						V_PROVIDER,
+						V_IMBALANCE_START,
+						V_IMBALANCE_END;
         IF V_NOTFOUND THEN
             LEAVE read_loop;
         END IF;
@@ -220,97 +236,64 @@ BEGIN
 
 							
 							SELECT 
-                rate_status, 
-                audit_rate_period_id 
-                  INTO 
-                    V_RATE_STATUS, 
-                    V_AUDIT_RATE_PERIOD_ID
-              FROM rate_rule_tariff_original 
-              WHERE rec_active_flag = 'Y'
-               AND id = V_RATE_ID;
+								rate_status, 
+								audit_rate_period_id 
+									INTO 
+										V_RATE_STATUS, 
+										V_AUDIT_RATE_PERIOD_ID
+							FROM rate_rule_tariff_original -- rate_rule_contract_original, rate_rule_mtm_original
+							WHERE rec_active_flag = 'Y'
+							 AND id = V_RATE_ID;
 
-              SELECT 
-                reference_table, 
-                reference_id
-                  INTO 
-                    V_REFERENCE_TABLE,
-                    V_REFERENCE_ID
-              FROM audit_rate_period
-              WHERE rec_active_flag = 'Y'
-                AND id = V_AUDIT_RATE_PERIOD_ID;
+							IF (V_RATE_STATUS = 'Active') THEN
+								
+								/**
+								 * ???? rule ? reference_table ? reference_id.
+								 */
+								SELECT 
+									reference_table, 
+									reference_id
+										INTO 
+											V_REFERENCE_TABLE,
+											V_REFERENCE_ID
+								FROM audit_rate_period
+								WHERE rec_active_flag = 'Y'
+									AND id = V_AUDIT_RATE_PERIOD_ID;
 
-              IF (V_RATE_STATUS = 'Active') THEN
-                
-                -- Query the Inactive record count.
-                SELECT 
-                  COUNT(1) INTO V_COUNT
-                FROM audit_rate_period
-                WHERE rec_active_flag = 'Y'
-                  AND reference_table = V_REFERENCE_TABLE
-                  AND reference_id =  V_REFERENCE_ID
-                  AND end_date IS NOT NULL;
+								/**
+								 * ?? inactive ?????????
+								 */
+								SELECT 
+									COUNT(1) INTO V_COUNT
+								FROM audit_rate_period
+								WHERE rec_active_flag = 'Y'
+									AND reference_table = V_REFERENCE_TABLE
+									AND reference_id =  V_REFERENCE_ID
+									AND end_date IS NOT NULL;
 
-                IF (V_COUNT > 0) THEN -- There are Inactive Records.
+								IF (V_COUNT > 0) THEN
 
-                  -- Query the max effective date of Inactive records.
-                  SELECT start_date INTO V_INACTIVE_MAX_EFFECTIVE_DATE
-                  FROM audit_rate_period
-                  WHERE rec_active_flag = 'Y'
-                    AND reference_table = V_REFERENCE_TABLE
-                    AND reference_id =  V_REFERENCE_ID
-                    AND end_date IS NOT NULL
-                  ORDER BY start_date DESC
-                  LIMIT 1;
+									SELECT start_date INTO V_INACTIVE_MAX_EFFECTIVE_DATE
+									FROM audit_rate_period
+									WHERE rec_active_flag = 'Y'
+										AND reference_table = V_REFERENCE_TABLE
+										AND reference_id =  V_REFERENCE_ID
+										AND end_date IS NOT NULL
+									ORDER BY start_date DESC
+									LIMIT 1;
 
-                  IF( IFNULL(STR_TO_DATE(V_RATE_EFFECTIVE_DATE, '%m/%d/%Y'),'') <= DATE_FORMAT(V_INACTIVE_MAX_EFFECTIVE_DATE, '%Y-%m-%d')) THEN
+									IF( IFNULL(str_to_date(V_RATE_EFFECTIVE_DATE, '%m/%d/%Y'),'') < date_format(V_INACTIVE_MAX_EFFECTIVE_DATE, '%Y-%m-%d')) THEN
+										-- ??????: 
+										-- 'Active effective date must be greater than inactive effective date.'
+										INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Rate Effective Date','"Active Rate Effective Date" has to be greater than "Inactive Rate Effective Date"');
+									END IF;
 
-                    -- Active effective date must be greater than Inactive effective date.
-                    INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Rate Effective Date','"Active Rate Effective Date" has to be greater than "Inactive Rate Effective Date"');
-                  END IF;
-
-                END IF;
-
-              ELSEIF V_RATE_STATUS = 'Inactive' THEN
-
-                -- Query the Active record count.
-                SELECT 
-                  COUNT(1) INTO V_COUNT
-                FROM audit_rate_period
-                WHERE rec_active_flag = 'Y'
-                  AND reference_table = V_REFERENCE_TABLE
-                  AND reference_id =  V_REFERENCE_ID
-                  AND end_date IS NULL;
-
-                IF (V_COUNT > 0) THEN -- There are Active Records.
-
-                  -- Query the max effective date of Inactive records.
-                  SELECT start_date INTO V_ACTIVE_EFFECTIVE_DATE
-                  FROM audit_rate_period
-                  WHERE rec_active_flag = 'Y'
-                    AND reference_table = V_REFERENCE_TABLE
-                    AND reference_id =  V_REFERENCE_ID
-                    AND end_date IS NULL
-                  ORDER BY start_date DESC
-                  LIMIT 1;
-
-                  IF( IFNULL(STR_TO_DATE(V_RATE_EFFECTIVE_DATE, '%m/%d/%Y'),'') >= DATE_FORMAT(V_ACTIVE_EFFECTIVE_DATE, '%Y-%m-%d')) THEN
-
-                    INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Rate Effective Date','"Inactive Rate Effective Date" cannot be greater than or equals to "Active Rate Effective Date"');
-                  END IF;
-
-                END IF;
-                
-              END IF; -- Update rate status judgement end. 
+								END IF;
+								
+							END IF;
 
 						END IF;
-
-						select count(1) INTO V_COUNT 
-            from audit_key_field 
-            where 
-              audit_reference_type_id = 2 
-              AND rec_active_flag = 'Y'
-              AND key_field_original = V_KEY_FIELD;
-
+						select count(1) INTO V_COUNT from audit_key_field where audit_reference_type_id = 2 AND key_field_original = V_KEY_FIELD;
 						IF V_COUNT = 0 THEN
 							INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Key Field*',concat(V_KEY_FIELD,' does not exist in TEMS.'));
 						ELSE
@@ -356,10 +339,6 @@ BEGIN
 							    INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Line Item Code',concat('Line Item Code has to be blank when Key Field is ',V_KEY_FIELD,'.'));
 							  END IF;
 
-							  IF IFNULL(V_USOC_DESCRIPTION, '') != '' THEN
-                  INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'USOC Description',concat('USOC Description has to be blank when Key Field is ',V_KEY_FIELD,'.'));
-                END IF;
-
 							END IF;
 
 
@@ -392,11 +371,11 @@ BEGIN
 							IF V_COUNT > 0 THEN
 								SELECT (V_QUANTITY_BEGIN REGEXP '[^0-9.]') INTO V_IS_NUMERICAL;
 								IF V_IS_NUMERICAL > 0 THEN
-									INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Qty Begin','ID must be a numerical type');
+									INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Qty Begin','Qty Begin must be a numerical type');
 								END IF;
 								SELECT (V_QUANTITY_END REGEXP '[^0-9.]') INTO V_IS_NUMERICAL;
 								IF V_IS_NUMERICAL > 0 THEN
-									INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Qty End','ID must be a numerical type');
+									INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Qty End','Qty End must be a numerical type');
 								END IF;
 								IF V_QUANTITY_BEGIN IS NULL OR V_QUANTITY_BEGIN = '' THEN
 									INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Qty Begin',concat('Qty Begin cannot be blank when Key Field is ',V_KEY_FIELD,'.'));
@@ -406,8 +385,11 @@ BEGIN
 									END IF;
 								END IF;
 							ELSE
-								IF (V_QUANTITY_BEGIN IS NOT NULL AND V_QUANTITY_BEGIN != '') OR (V_QUANTITY_END IS NOT NULL AND V_QUANTITY_END != '') THEN
-									INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Qty End',concat('Qty Begin and Qty End have to be blank when Key Field is ',V_KEY_FIELD,'.'));
+								select locate('Bill & Keep',V_KEY_FIELD) INTO V_COUNT;
+								IF V_COUNT <= 0 THEN
+									IF (V_QUANTITY_BEGIN IS NOT NULL AND V_QUANTITY_BEGIN != '') OR (V_QUANTITY_END IS NOT NULL AND V_QUANTITY_END != '') THEN
+										INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Qty End',concat('Qty Begin and Qty End have to be blank when Key Field is ',V_KEY_FIELD,'.'));
+									END IF;
 								END IF;
 							END IF;
 
@@ -458,6 +440,77 @@ BEGIN
 								END IF;
 							END IF;
 
+							select locate('Bill & Keep',V_KEY_FIELD) INTO V_COUNT;
+							IF V_COUNT > 0 THEN
+								SELECT (V_QUANTITY_BEGIN REGEXP '[^0-9.]') INTO V_IS_NUMERICAL;
+								IF V_IS_NUMERICAL > 0 THEN
+									INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Qty Begin','Qty Begin must be a numerical type');
+								END IF;
+								SELECT (V_QUANTITY_END REGEXP '[^0-9.]') INTO V_IS_NUMERICAL;
+								IF V_IS_NUMERICAL > 0 THEN
+									INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Qty End','Qty End must be a numerical type');
+								END IF;
+								IF V_QUANTITY_BEGIN IS NULL OR V_QUANTITY_BEGIN = '' THEN
+									INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Qty Begin',concat('Qty Begin cannot be blank when Key Field is ',V_KEY_FIELD,'.'));
+								ELSE
+									IF V_QUANTITY_END IS NOT NULL AND V_QUANTITY_END != '' AND V_QUANTITY_BEGIN > V_QUANTITY_END THEN
+										INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Qty End','"Qty End" has to be greater than "Qty Begin".');
+									END IF;
+								END IF;
+
+								SELECT (V_IMBALANCE_START REGEXP '[^0-9.]') INTO V_IS_NUMERICAL;
+								IF V_IS_NUMERICAL > 0 THEN
+									INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Imbalance Start (%)','Imbalance Start must be a numerical type');
+								END IF;
+								SELECT (V_IMBALANCE_END REGEXP '[^0-9.]') INTO V_IS_NUMERICAL;
+								IF V_IS_NUMERICAL > 0 THEN
+									INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Imbalance End (%)','Imbalance End must be a numerical type');
+								END IF;
+								IF V_IMBALANCE_START IS NULL OR V_IMBALANCE_START = '' THEN
+									INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Imbalance Start (%)',concat('Imbalance Start cannot be blank when Key Field is ',V_KEY_FIELD,'.'));
+								ELSE
+									IF V_IMBALANCE_END IS NOT NULL AND V_IMBALANCE_END != '' AND CONVERT(V_IMBALANCE_START,SIGNED) > CONVERT(V_IMBALANCE_END,SIGNED) THEN
+										INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Imbalance End (%)','"Imbalance End" has to be greater than "Imbalance Start".');
+									END IF;
+
+									IF CONVERT(V_IMBALANCE_START,SIGNED) > 100 OR CONVERT(V_IMBALANCE_END,SIGNED) > 100 THEN
+										INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Imbalance End (%)','The percentage cannot be greater than 100.');
+									END IF;
+								END IF;
+
+
+								IF V_BILL_KEEP_BAN IS NULL OR V_BILL_KEEP_BAN ='' THEN
+									INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Bill Keep Ban',concat('Bill Keep Ban cannot be blank when Key Field is ',V_KEY_FIELD,'.'));
+								ELSE
+									select count(1) INTO V_COUNT from ban b where account_number = V_BILL_KEEP_BAN and b.ban_status_id = 1 and b.rec_active_flag = 'Y' and b.master_ban_flag = 'Y';
+									IF V_COUNT = 0 THEN
+										INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Bill Keep Ban','"Bill Keep Ban" has to be an active BAN in TEMS.');
+									END IF;
+								END IF;
+						
+								/*IF V_PROVINCE IS NULL OR V_PROVINCE = '' THEN
+									INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Province',concat('Province cannot be blank when Key Field is ',V_KEY_FIELD,'.'));
+								END IF;
+
+								IF V_PROVIDER IS NULL OR V_PROVIDER = '' THEN
+									INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Provider',concat('Provider cannot be blank when Key Field is ',V_KEY_FIELD,'.'));
+								END IF;*/
+
+							ELSE
+								IF V_BILL_KEEP_BAN IS NOT NULL AND V_BILL_KEEP_BAN != '' THEN
+									INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Bill Keep Ban',concat('Bill Keep Ban has to be blank when Key Field is ',V_KEY_FIELD,'.'));
+								END IF;
+								IF V_PROVINCE IS NOT NULL AND V_PROVINCE != '' THEN
+									INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Province',concat('Province has to be blank when Key Field is ',V_KEY_FIELD,'.'));
+								END IF;
+								IF V_PROVIDER IS NOT NULL AND V_PROVIDER != '' THEN
+									INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Provider',concat('Provider has to be blank when Key Field is ',V_KEY_FIELD,'.'));
+								END IF;
+								IF (V_IMBALANCE_START IS NOT NULL AND V_IMBALANCE_START != '') OR (V_IMBALANCE_END IS NOT NULL AND V_IMBALANCE_END != '') THEN
+									INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Imbalance End (%)',concat('Imbalance Start and Imbalance End have to be blank when Key Field is ',V_KEY_FIELD,'.'));
+								END IF;
+							END IF;
+
 						END IF;
 					END IF;
 
@@ -476,36 +529,40 @@ BEGIN
 						INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Rate Effective Date','Rate Effective Date is required');
           END IF;
 					
-					IF V_CHARGE_TYPE IS NULL OR V_CHARGE_TYPE = '' THEN
-						INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Charge Type %Contains%','Charge Type is required');
-					END IF;
-
-					IF V_SUMMARY_VENDOR_NAME IS NULL OR V_SUMMARY_VENDOR_NAME = '' THEN
-						INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Summary Vendor Name (SVN) %Contains%','Summary Vendor Name is required');
-					ELSE
-						select count(1) INTO V_COUNT from vendor where replace(summary_vendor_name,' ','') like replace(concat('%',V_SUMMARY_VENDOR_NAME,'%'),' ','') and vendor_status_id = 1 and rec_active_flag = 'Y';
-						IF V_COUNT = 0 THEN
-							INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Summary Vendor Name (SVN) %Contains%',concat(V_SUMMARY_VENDOR_NAME,' does not exist in TEMS.'));
+					select locate('Bill & Keep',V_KEY_FIELD) INTO V_COUNT;
+					IF V_COUNT <= 0 THEN
+						IF V_CHARGE_TYPE IS NULL OR V_CHARGE_TYPE = '' THEN
+							INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Charge Type %Contains%','Charge Type is required');
 						END IF;
-						/*OPEN cur_summary_vendor_item;
-              read_loop1: LOOP
-              FETCH cur_summary_vendor_item INTO
-                    V_CHILD_SUMMARY_VENDOR_NAME;
-              IF V_NOTFOUND THEN
-                  LEAVE read_loop1;
-              END IF;
 
-							select count(1) INTO V_COUNT from vendor where replace(summary_vendor_name,' ','') like replace(concat('%',V_CHILD_SUMMARY_VENDOR_NAME,'%'),' ','') and vendor_status_id = 1 and rec_active_flag = 'Y';
+						IF V_SUMMARY_VENDOR_NAME IS NULL OR V_SUMMARY_VENDOR_NAME = '' THEN
+							INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Summary Vendor Name (SVN) %Contains%','Summary Vendor Name is required');
+						ELSE
+							select count(1) INTO V_COUNT from vendor where replace(summary_vendor_name,' ','') like replace(concat('%',V_SUMMARY_VENDOR_NAME,'%'),' ','') and vendor_status_id = 1 and rec_active_flag = 'Y';
 							IF V_COUNT = 0 THEN
-								INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Summary Vendor Name (SVN) %Contains%',concat(V_CHILD_SUMMARY_VENDOR_NAME,' is not exist.'));
-								LEAVE read_loop1;
+								INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Summary Vendor Name (SVN) %Contains%',concat(V_SUMMARY_VENDOR_NAME,' does not exist in TEMS.'));
 							END IF;
+							/*OPEN cur_summary_vendor_item;
+								read_loop1: LOOP
+								FETCH cur_summary_vendor_item INTO
+											V_CHILD_SUMMARY_VENDOR_NAME;
+								IF V_NOTFOUND THEN
+										LEAVE read_loop1;
+								END IF;
 
-            END LOOP;
-            CLOSE cur_summary_vendor_item;
-            SET V_NOTFOUND = FALSE;*/
+								select count(1) INTO V_COUNT from vendor where replace(summary_vendor_name,' ','') like replace(concat('%',V_CHILD_SUMMARY_VENDOR_NAME,'%'),' ','') and vendor_status_id = 1 and rec_active_flag = 'Y';
+								IF V_COUNT = 0 THEN
+									INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Summary Vendor Name (SVN) %Contains%',concat(V_CHILD_SUMMARY_VENDOR_NAME,' is not exist.'));
+									LEAVE read_loop1;
+								END IF;
 
+							END LOOP;
+							CLOSE cur_summary_vendor_item;
+							SET V_NOTFOUND = FALSE;*/
+
+						END IF;
 					END IF;
+					
 
 					IF V_VENDOR_NAME IS NULL OR V_VENDOR_NAME = '' THEN
 						SET V_KEY_FIELD_IS_VN = (SELECT replace(V_KEY_FIELD,'SVN','') like "%VN%");
@@ -585,6 +642,7 @@ BEGIN
           IF V_IS_NUMERICAL > 0 THEN
             INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Multiplier','Multiplier must be a numerical type');
           END IF;
+
 					SELECT COUNT(1) INTO V_COUNT 
 								FROM rate_rule_tariff_original
 							 WHERE     rec_active_flag = 'Y'
@@ -613,7 +671,12 @@ BEGIN
 										 AND IFNULL(tariff_page,'') = V_TARIFF_PAGE
 										 AND IFNULL(part_section,'') = V_PART_SECTION
 										 AND IFNULL(item_number,'') = V_ITEM_NUMBER
-										 AND IFNULL(crtc_number,'') = V_CRTC_NUMBER;
+										 AND IFNULL(crtc_number,'') = V_CRTC_NUMBER
+										 AND IFNULL(bill_keep_ban,'') = V_BILL_KEEP_BAN
+										 AND IFNULL(province,'') = V_PROVINCE
+										 AND IFNULL(provider,'') = V_PROVIDER
+										 AND IFNULL(imbalance_start,'') = 0+V_IMBALANCE_START
+										 AND IFNULL(imbalance_end,'') = 0+V_IMBALANCE_END;
 					IF V_COUNT > 0 THEN
 						INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'ID','This record already exists in TEMS.');
 					END IF;
@@ -645,7 +708,12 @@ BEGIN
 										 AND IFNULL(tariff_page,'') = V_TARIFF_PAGE
 										 AND IFNULL(part_section,'') = V_PART_SECTION
 										 AND IFNULL(item_number,'') = V_ITEM_NUMBER
-										 AND IFNULL(crtc_number,'') = V_CRTC_NUMBER;
+										 AND IFNULL(crtc_number,'') = V_CRTC_NUMBER
+										 AND IFNULL(bill_keep_ban,'') = V_BILL_KEEP_BAN
+										 AND IFNULL(province,'') = V_PROVINCE
+										 AND IFNULL(provider,'') = V_PROVIDER
+										 AND IFNULL(imbalance_start,'') = V_IMBALANCE_START
+										 AND IFNULL(imbalance_end,'') = V_IMBALANCE_END;
 					IF V_COUNT > 0 THEN
 						INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'ID','This record already exists in TEMS.');
 					END IF;
@@ -712,7 +780,13 @@ BEGIN
 																		 discount,
 																		 exclusion_ban,
 																		 exclusion_item_description,
-																		 notes)
+																		 notes,
+																		bill_keep_ban,
+																		bill_keep_ban_id,
+																		province,
+																		provider,
+																		imbalance_start,
+																		imbalance_end)
 		SELECT IF(rate_id!='',rate_id,NULL),
 					 batch_no,
 					 row_no,
@@ -745,9 +819,15 @@ BEGIN
 					 IF(discount!='',discount,NULL),
 					 IF(exclusion_ban!='',exclusion_ban,NULL),
 					 IF(exclusion_item_descripton!='',exclusion_item_descripton,NULL),
-					 IF(notes!='',notes,NULL)
+					 IF(notes!='',notes,NULL),
+					 IF(bill_keep_ban!='',bill_keep_ban,NULL),
+					 IF(bill_keep_ban!='',(SELECT id FROM ban b where account_number = bill_keep_ban and b.ban_status_id = 1 and b.rec_active_flag = 'Y' and b.master_ban_flag = 'Y' LIMIT 1),NULL),
+					 IF(province!='',province,NULL),
+					 IF(provider!='',provider,NULL),
+					 IF(imbalance_start!='',imbalance_start,NULL),
+					 IF(imbalance_end!='',imbalance_end,NULL)
      FROM rate_rule_tariff_master_import WHERE batch_no = V_BATCH_NO;
 		 CALL SP_UPDATE_TARIFF_MASTER_DATA_TO_RATE_MODULE_TABLES(V_BATCH_NO);
   END IF;
   -- DELETE FROM rate_rule_tariff_master_import WHERE batch_no = V_BATCH_NO;
-END;
+END

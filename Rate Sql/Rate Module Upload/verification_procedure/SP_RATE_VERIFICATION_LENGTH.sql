@@ -1,5 +1,6 @@
 DROP PROCEDURE IF EXISTS ccm_db.SP_RATE_VERIFICATION_LENGTH;
 CREATE PROCEDURE ccm_db.`SP_RATE_VERIFICATION_LENGTH`(V_BATCH_NO VARCHAR(64))
+
 BEGIN
 	DECLARE V_RATE_ID VARCHAR(32);
 	DECLARE V_BAN_ID INT;
@@ -33,6 +34,11 @@ BEGIN
 	DECLARE 	V_EXCLUSION_BAN	MEDIUMTEXT;
 	DECLARE 	V_EXCLUSION_ITEM_DESCRIPTON	MEDIUMTEXT;
 	DECLARE 	V_NOTES	MEDIUMTEXT;
+	DECLARE 	V_BILL_KEEP_BAN MEDIUMTEXT;
+	DECLARE 	V_IMBALANCE_START	MEDIUMTEXT;
+	DECLARE 	V_IMBALANCE_END MEDIUMTEXT;
+	DECLARE 	V_PROVINCE MEDIUMTEXT;
+	DECLARE 	V_PROVIDER MEDIUMTEXT;
 
 	DECLARE V_ROW_NUMBER INT;
 	DECLARE V_NOTFOUND INT DEFAULT FALSE;
@@ -68,7 +74,12 @@ BEGIN
 						IFNULL(discount,''),
 						IFNULL(exclusion_ban,''),
 						IFNULL(exclusion_item_descripton,''),
-						IFNULL(notes,'')
+						IFNULL(notes,''),
+						IFNULL(bill_keep_ban,''),
+						IFNULL(province,''),
+						IFNULL(provider,''),
+						IFNULL(imbalance_start,''),
+						IFNULL(imbalance_end,'')
 
 				FROM rate_length_import
 				WHERE batch_no = V_BATCH_NO;
@@ -115,7 +126,12 @@ BEGIN
 						V_DISCOUNT,
 						V_EXCLUSION_BAN,
 						V_EXCLUSION_ITEM_DESCRIPTON,
-						V_NOTES;
+						V_NOTES,
+						V_BILL_KEEP_BAN,
+						V_PROVINCE,
+						V_PROVIDER,
+						V_IMBALANCE_START,
+						V_IMBALANCE_END;
         IF V_NOTFOUND THEN
             LEAVE read_loop;
         END IF;
@@ -232,6 +248,28 @@ BEGIN
 					INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Notes','The maximum characters of Notes is 500');
 				END IF;
 
+				IF LENGTH(V_BILL_KEEP_BAN) > 64 THEN
+					INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Bill Keep Ban','The maximum characters of Bill Keep Ban is 64');
+				END IF;
+
+				IF LENGTH(V_PROVINCE) > 16 THEN
+					INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Province','The maximum characters of Province is 16');
+				END IF;
+
+				IF LENGTH(V_PROVIDER) > 16 THEN
+					INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Provider','The maximum characters of Provider is 64');
+				END IF;
+
+				IF LENGTH(V_IMBALANCE_START) > 20 THEN
+					INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Imbalance Start (%)','The maximum characters of Provider is 64');
+				END IF;
+
+				IF LENGTH(V_IMBALANCE_END) > 20 THEN
+					INSERT INTO tmp_rate_error (row_number,field,note) VALUES (V_ROW_NUMBER,'Imbalance End (%)','The maximum characters of Provider is 64');
+				END IF;
+
+
+
 				SET v_commit_count = v_commit_count + 1;
          IF (v_commit_count % 100 = 0) THEN
             commit;
@@ -275,7 +313,12 @@ BEGIN
 																		 discount,
 																		 exclusion_ban,
 																		 exclusion_item_descripton,
-																		 notes)
+																		 notes,
+																		bill_keep_ban,
+																		province,
+																		provider,
+																		imbalance_start,
+																		imbalance_end)
    SELECT  rate_id,
 					 batch_no,
 					 row_no,
@@ -308,8 +351,13 @@ BEGIN
 					 discount,
 					 exclusion_ban,
 					 exclusion_item_descripton,
-					 notes
+					 notes,
+					bill_keep_ban,
+					province,
+					provider,
+					imbalance_start,
+					imbalance_end
      FROM rate_length_import WHERE batch_no = V_BATCH_NO;
      DELETE FROM rate_length_import WHERE batch_no = V_BATCH_NO;
   
-END;
+END

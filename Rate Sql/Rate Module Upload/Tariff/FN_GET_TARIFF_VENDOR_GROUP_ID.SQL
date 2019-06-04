@@ -44,108 +44,104 @@ BEGIN
     WHERE id = PARAM_MASTER_TABLE_ID
         AND rec_active_flag = 'Y';
 
-    IF ( V_SUMMARY_VENDOR_NAME IS NOT NULL ) THEN
+    IF (V_VENDOR_NAME IS NULL OR V_VENDOR_NAME = '') THEN
 
-        IF (V_VENDOR_NAME IS NULL OR V_VENDOR_NAME = '') THEN
+        SELECT GROUP_CONCAT( CAST(id AS CHAR) ORDER BY id )
+            INTO V_VENDOR_IDS
+        FROM vendor
+        WHERE summary_vendor_name = V_SUMMARY_VENDOR_NAME
+            AND vendor_status_id = 1
+            AND rec_active_flag = 'Y';
 
-            SELECT GROUP_CONCAT( CAST(id AS CHAR) ORDER BY id )
-                INTO V_VENDOR_IDS
-            FROM vendor
-            WHERE summary_vendor_name = V_SUMMARY_VENDOR_NAME
-                AND vendor_status_id = 1
-                AND rec_active_flag = 'Y';
+        SELECT COUNT(1) INTO V_VENDOR_IDS_ITEM_COUNT
+        FROM vendor_group
+        WHERE vendor_ids = V_VENDOR_IDS;
 
-            SELECT COUNT(1) INTO V_VENDOR_IDS_ITEM_COUNT
-            FROM vendor_group
-            WHERE vendor_ids = V_VENDOR_IDS;
+        IF (V_VENDOR_IDS_ITEM_COUNT = 0) THEN
 
-            IF (V_VENDOR_IDS_ITEM_COUNT = 0) THEN
+            INSERT INTO vendor_group (group_name, vendor_ids, notes)
+            VALUES (V_SUMMARY_VENDOR_NAME, V_VENDOR_IDS, CONCAT(V_SUMMARY_VENDOR_NAME, ' Summary Vendor') );
 
-                INSERT INTO vendor_group (group_name, vendor_ids, notes)
-                VALUES (V_SUMMARY_VENDOR_NAME, V_VENDOR_IDS, CONCAT(V_SUMMARY_VENDOR_NAME, ' Summary Vendor') );
+            SET V_RETURNED_VENDOR_GROUP_ID = ( SELECT MAX(id) FROM vendor_group );
 
-                SET V_RETURNED_VENDOR_GROUP_ID = ( SELECT MAX(id) FROM vendor_group );
+            OPEN V_VENDOR_CURSOR;
 
-                OPEN V_VENDOR_CURSOR;
+                LABEL1:
+                WHILE NOT V_CURSOR_DONE_FLAG DO
 
-                    LABEL1:
-                    WHILE NOT V_CURSOR_DONE_FLAG DO
+                    FETCH V_VENDOR_CURSOR INTO V_VENDOR_ID;
 
-                        FETCH V_VENDOR_CURSOR INTO V_VENDOR_ID;
+                    IF (V_CURSOR_DONE_FLAG) THEN
+                        LEAVE LABEL1;
+                    END IF;
 
-                        IF (V_CURSOR_DONE_FLAG) THEN
-                            LEAVE LABEL1;
-                        END IF;
+                    SELECT COUNT(1) INTO V_MATCH_ITEM_COUNT
+                    FROM vendor_group_vendor
+                    WHERE vendor_group_id = V_RETURNED_VENDOR_GROUP_ID
+                        AND vendor_id = V_VENDOR_ID;
 
-                        SELECT COUNT(1) INTO V_MATCH_ITEM_COUNT
-                        FROM vendor_group_vendor
-                        WHERE vendor_group_id = V_RETURNED_VENDOR_GROUP_ID
-                            AND vendor_id = V_VENDOR_ID;
+                    IF (V_MATCH_ITEM_COUNT = 0) THEN
 
-                        IF (V_MATCH_ITEM_COUNT = 0) THEN
+                        INSERT INTO vendor_group_vendor (vendor_group_id, vendor_id)
+                        VALUES(V_RETURNED_VENDOR_GROUP_ID, V_VENDOR_ID);
 
-                            INSERT INTO vendor_group_vendor (vendor_group_id, vendor_id)
-                            VALUES(V_RETURNED_VENDOR_GROUP_ID, V_VENDOR_ID);
+                    END IF;
 
-                        END IF;
+                END WHILE LABEL1;
 
-                    END WHILE LABEL1;
+            CLOSE V_VENDOR_CURSOR;
 
-                CLOSE V_VENDOR_CURSOR;
+        ELSE
 
-            ELSE
+            SET V_RETURNED_VENDOR_GROUP_ID = (
+                SELECT id
+                FROM vendor_group
+                WHERE vendor_ids = V_VENDOR_IDS
+                LIMIT 1
+            );
 
-                SET V_RETURNED_VENDOR_GROUP_ID = (
-                    SELECT id
-                    FROM vendor_group
-                    WHERE vendor_ids = V_VENDOR_IDS
-                    LIMIT 1
-                );
+        END IF;
+
+    ELSE
+
+        SELECT GROUP_CONCAT( CAST(id AS CHAR) ORDER BY id )
+            INTO V_VENDOR_IDS
+        FROM vendor
+        WHERE vendor_name = V_VENDOR_NAME
+            AND vendor_status_id = 1
+            AND rec_active_flag = 'Y';
+
+        SELECT COUNT(1) INTO V_VENDOR_IDS_ITEM_COUNT
+        FROM vendor_group
+        WHERE vendor_ids = V_VENDOR_IDS;
+
+        IF (V_VENDOR_IDS_ITEM_COUNT = 0) THEN
+          
+            INSERT INTO vendor_group (group_name, vendor_ids, notes)
+            VALUES (V_VENDOR_NAME, V_VENDOR_IDS, CONCAT(V_VENDOR_NAME, ' Vendor'));
+
+            SET V_RETURNED_VENDOR_GROUP_ID = ( SELECT MAX(id) FROM vendor_group );
+
+            SELECT COUNT(1) INTO V_MATCH_ITEM_COUNT
+            FROM vendor_group_vendor
+            WHERE vendor_group_id = V_RETURNED_VENDOR_GROUP_ID
+                AND vendor_id = V_VENDOR_IDS;
+
+            IF(V_MATCH_ITEM_COUNT) THEN
+
+                INSERT INTO vendor_group_vendor (vendor_group_id, vendor_id)
+                VALUES(V_RETURNED_VENDOR_GROUP_ID, V_VENDOR_IDS);
 
             END IF;
 
         ELSE
 
-            SELECT GROUP_CONCAT( CAST(id AS CHAR) ORDER BY id )
-                INTO V_VENDOR_IDS
-            FROM vendor
-            WHERE vendor_name = V_VENDOR_NAME
-                AND vendor_status_id = 1
-                AND rec_active_flag = 'Y';
-
-            SELECT COUNT(1) INTO V_VENDOR_IDS_ITEM_COUNT
-            FROM vendor_group
-            WHERE vendor_ids = V_VENDOR_IDS;
-
-            IF (V_VENDOR_IDS_ITEM_COUNT = 0) THEN
-              
-                INSERT INTO vendor_group (group_name, vendor_ids, notes)
-                VALUES (V_VENDOR_NAME, V_VENDOR_IDS, CONCAT(V_VENDOR_NAME, ' Vendor'));
-
-                SET V_RETURNED_VENDOR_GROUP_ID = ( SELECT MAX(id) FROM vendor_group );
-
-                SELECT COUNT(1) INTO V_MATCH_ITEM_COUNT
-                FROM vendor_group_vendor
-                WHERE vendor_group_id = V_RETURNED_VENDOR_GROUP_ID
-                    AND vendor_id = V_VENDOR_IDS;
-
-                IF(V_MATCH_ITEM_COUNT) THEN
-
-                    INSERT INTO vendor_group_vendor (vendor_group_id, vendor_id)
-                    VALUES(V_RETURNED_VENDOR_GROUP_ID, V_VENDOR_IDS);
-
-                END IF;
-
-            ELSE
-
-                SET V_RETURNED_VENDOR_GROUP_ID = (
-                    SELECT id
-                    FROM vendor_group
-                    WHERE vendor_ids = V_VENDOR_IDS
-                    LIMIT 1
-                );
-
-            END IF;
+            SET V_RETURNED_VENDOR_GROUP_ID = (
+                SELECT id
+                FROM vendor_group
+                WHERE vendor_ids = V_VENDOR_IDS
+                LIMIT 1
+            );
 
         END IF;
 

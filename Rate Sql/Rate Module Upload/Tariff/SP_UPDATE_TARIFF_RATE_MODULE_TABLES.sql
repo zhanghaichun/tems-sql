@@ -41,6 +41,16 @@ BEGIN
     DECLARE V_DISOCUNT DOUBLE(20, 5);
     DECLARE V_EXCLUSION_BAN VARCHAR(128);
     DECLARE V_EXCLUSION_ITEM_DESCRIPTION VARCHAR(255);
+
+    -- BILL_KEEP FIELDS
+    DECLARE V_BILL_KEEP_BAN VARCHAR(64);
+    DECLARE V_BILL_KEEP_BAN_ID INT;
+    DECLARE V_PROVINCE VARCHAR(32);
+    DECLARE V_PROVIDER VARCHAR(32);
+    DECLARE V_IMBALANCE_START DOUBLE(20, 5);
+    DECLARE V_IMBALANCE_END DOUBLE(20, 5);
+
+
     DECLARE V_NOTES VARCHAR(500);
 
 
@@ -75,6 +85,14 @@ BEGIN
     DECLARE V_ORIGIN_EXCLUSION_ITEM_DESCRIPTION VARCHAR(255);
     DECLARE V_ORIGIN_NOTES VARCHAR(500);
 
+    -- BILL_KEEP FIELDS
+    DECLARE V_ORIGINAL_BILL_KEEP_BAN VARCHAR(64);
+    DECLARE V_ORIGINAL_BILL_KEEP_BAN_ID INT;
+    DECLARE V_ORIGINAL_PROVINCE VARCHAR(32);
+    DECLARE V_ORIGINAL_PROVIDER VARCHAR(32);
+    DECLARE V_ORIGINAL_IMBALANCE_START DOUBLE(20, 5);
+    DECLARE V_ORIGINAL_IMBALANCE_END DOUBLE(20, 5);
+
     DECLARE V_TARIFF_FILE_ITEM_COUNT INT;
 
     DECLARE V_RATE_MODE VARCHAR(64);
@@ -88,6 +106,8 @@ BEGIN
     DECLARE V_AUDIT_PERIOD_ITEM_COUNT INT;
 
     DECLARE V_TARIFF_RATE_BY_QUANTITY_ID INT;
+
+    DECLARE V_TARIFF_RATE_BY_BILL_KEEP_ID INT;
 
     DECLARE V_MAPPING_KEY_FIELD VARCHAR(64);
 
@@ -133,6 +153,12 @@ BEGIN
         discount,
         exclusion_ban,
         exclusion_item_description,
+        bill_keep_ban,
+        bill_keep_ban_id,
+        province,
+        provider,
+        imbalance_start,
+        imbalance_end,
         notes
             INTO
                 V_CHARGE_TYPE,
@@ -162,6 +188,12 @@ BEGIN
                 V_DISOCUNT,
                 V_EXCLUSION_BAN,
                 V_EXCLUSION_ITEM_DESCRIPTION,
+                V_BILL_KEEP_BAN,
+                V_BILL_KEEP_BAN_ID,
+                V_PROVINCE,
+                V_PROVIDER,
+                V_IMBALANCE_START,
+                V_IMBALANCE_END,
                 V_NOTES
     FROM rate_rule_tariff_master_batch
     WHERE batch_no = PARAM_BATCH_NO
@@ -197,6 +229,12 @@ BEGIN
         discount,
         exclusion_ban,
         exclusion_item_description,
+        bill_keep_ban,
+        bill_keep_ban_id,
+        province,
+        provider,
+        imbalance_start,
+        imbalance_end,
         notes
             INTO
                 V_ORIGIN_AUDIT_REFERENCE_MAPPING_ID,
@@ -228,6 +266,12 @@ BEGIN
                 V_ORIGIN_DISOCUNT,
                 V_ORIGIN_EXCUSION_BAN,
                 V_ORIGIN_EXCLUSION_ITEM_DESCRIPTION,
+                V_ORIGINAL_BILL_KEEP_BAN,
+                V_ORIGINAL_BILL_KEEP_BAN_ID,
+                V_ORIGINAL_PROVINCE,
+                V_ORIGINAL_PROVIDER,
+                V_ORIGINAL_IMBALANCE_START,
+                V_ORIGINAL_IMBALANCE_END,
                 V_ORIGIN_NOTES
     FROM rate_rule_tariff_original
     WHERE id = PARAM_SYSTEM_RATE_RULE_ID
@@ -282,6 +326,36 @@ BEGIN
         END IF;
 
         IF( IFNULL(V_QUANTITY_END, '') != IFNULL(V_ORIGIN_QUANTITY_END, '') ) THEN
+            SET V_UPDATED_FLAG = TRUE;
+            LEAVE CONTRAST_FIELDS;
+        END IF;
+
+        IF( IFNULL(V_BILL_KEEP_BAN, '') != IFNULL(V_ORIGINAL_BILL_KEEP_BAN, '') ) THEN
+            SET V_UPDATED_FLAG = TRUE;
+            LEAVE CONTRAST_FIELDS;
+        END IF;
+
+        IF( IFNULL(V_BILL_KEEP_BAN_ID, '') != IFNULL(V_ORIGINAL_BILL_KEEP_BAN_ID, '') ) THEN
+            SET V_UPDATED_FLAG = TRUE;
+            LEAVE CONTRAST_FIELDS;
+        END IF;
+
+        IF( IFNULL(V_PROVINCE, '') != IFNULL(V_ORIGINAL_PROVINCE, '') ) THEN
+            SET V_UPDATED_FLAG = TRUE;
+            LEAVE CONTRAST_FIELDS;
+        END IF;
+
+        IF( IFNULL(V_PROVIDER, '') != IFNULL(V_ORIGINAL_PROVIDER, '') ) THEN
+            SET V_UPDATED_FLAG = TRUE;
+            LEAVE CONTRAST_FIELDS;
+        END IF;
+
+        IF( IFNULL(V_IMBALANCE_START, '') != IFNULL(V_ORIGINAL_IMBALANCE_START, '') ) THEN
+            SET V_UPDATED_FLAG = TRUE;
+            LEAVE CONTRAST_FIELDS;
+        END IF;
+
+        IF( IFNULL(V_IMBALANCE_END, '') != IFNULL(V_ORIGINAL_IMBALANCE_END, '') ) THEN
             SET V_UPDATED_FLAG = TRUE;
             LEAVE CONTRAST_FIELDS;
         END IF;
@@ -408,6 +482,12 @@ BEGIN
             discount = V_DISOCUNT,
             exclusion_ban = V_EXCLUSION_BAN,
             exclusion_item_description = V_EXCLUSION_ITEM_DESCRIPTION,
+            bill_keep_ban = V_BILL_KEEP_BAN,
+            bill_keep_ban_id = V_BILL_KEEP_BAN_ID,
+            province = V_PROVINCE,
+            provider = V_PROVIDER,
+            imbalance_start = V_IMBALANCE_START,
+            imbalance_end = V_IMBALANCE_END,
             notes = V_NOTES
         WHERE id = PARAM_SYSTEM_RATE_RULE_ID;
 
@@ -444,7 +524,8 @@ BEGIN
             line_item_code = V_LINE_ITEM_CODE, 
             line_item_code_description = V_LINE_ITEM_CODE_DESCRIPTION, 
             usage_item_type = V_ITEM_TYPE, 
-            item_description = V_ITEM_DESCRIPTIOIN, 
+            item_description = V_ITEM_DESCRIPTIOIN,
+            ban_id = V_BILL_KEEP_BAN_ID,
             modified_timestamp = NOW()
         WHERE id = V_ORIGIN_AUDIT_REFERENCE_MAPPING_ID
             AND rec_active_flag = 'Y';
@@ -567,8 +648,8 @@ BEGIN
             END IF;
 
         ELSEIF(V_REFERENCE_TABLE = 'tariff_rate_by_quantity') THEN
+        -- reference_table = tariff_rate_by_quantity
 
-            -- Get record id of tariff_rate_by_quantity table.
             SELECT reference_id INTO V_TARIFF_RATE_BY_QUANTITY_ID
             FROM audit_rate_period
             WHERE id = V_ORIGIN_AUDIT_RATE_PERIOD_ID
@@ -624,6 +705,69 @@ BEGIN
                     AND start_date = V_START_DATE
                     AND reference_table = 'tariff_rate_by_quantity'
                     AND reference_id = V_TARIFF_RATE_BY_QUANTITY_ID;
+
+            END IF;
+
+        ELSEIF(V_REFERENCE_TABLE = 'tariff_rate_by_bill_keep') THEN
+
+            SELECT reference_id INTO V_TARIFF_RATE_BY_BILL_KEEP_ID
+            FROM audit_rate_period
+            WHERE id = V_ORIGIN_AUDIT_RATE_PERIOD_ID
+                AND rec_active_flag = 'Y';
+
+            UPDATE tariff_rate_by_bill_keep
+            SET
+                province = V_PROVINCE,
+                provider = V_PROVIDER,
+                trunk_start = V_QUANTITY_BEGIN,
+                trunk_end = V_QUANTITY_END,
+                imbalance_start = V_IMBALANCE_START,
+                imbalance_end = V_IMBALANCE_END
+            WHERE id = V_TARIFF_RATE_BY_BILL_KEEP_ID;
+
+            -- Query inactive record.
+            SELECT COUNT(1) INTO V_AUDIT_PERIOD_ITEM_COUNT
+            FROM audit_rate_period
+            WHERE reference_table = 'tariff_rate_by_bill_keep'
+                AND reference_id = V_TARIFF_RATE_BY_BILL_KEEP_ID
+                AND end_date IS NOT NULL;
+
+            IF (V_AUDIT_PERIOD_ITEM_COUNT = 0) THEN
+
+                UPDATE audit_rate_period
+                SET
+                    rate = V_RATE,
+                    start_date = V_RATE_EFFECTIVE_DATE,
+                    rules_details = V_RULES_DETAILS
+                WHERE id = V_ORIGIN_AUDIT_RATE_PERIOD_ID
+                    AND rec_active_flag = 'Y';
+
+            ELSE
+
+                UPDATE audit_rate_period
+                SET
+                    rate = V_RATE,
+                    start_date = V_RATE_EFFECTIVE_DATE,
+                    rules_details = V_RULES_DETAILS
+                WHERE id = V_ORIGIN_AUDIT_RATE_PERIOD_ID
+                    AND rec_active_flag = 'Y';
+
+                SELECT start_date INTO V_START_DATE
+                FROM audit_rate_period
+                WHERE rec_active_flag = 'Y'
+                    AND start_date < V_RATE_EFFECTIVE_DATE
+                    AND reference_table = 'tariff_rate_by_bill_keep'
+                    AND reference_id = V_TARIFF_RATE_BY_BILL_KEEP_ID
+                GROUP BY start_date
+                ORDER BY start_date DESC
+                LIMIT 1;
+
+                UPDATE audit_rate_period
+                SET end_date = DATE_SUB(V_RATE_EFFECTIVE_DATE, INTERVAL 1 DAY)
+                WHERE rec_active_flag = 'Y'
+                    AND start_date = V_START_DATE
+                    AND reference_table = 'tariff_rate_by_bill_keep'
+                    AND reference_id = V_TARIFF_RATE_BY_BILL_KEEP_ID;
 
             END IF;
 

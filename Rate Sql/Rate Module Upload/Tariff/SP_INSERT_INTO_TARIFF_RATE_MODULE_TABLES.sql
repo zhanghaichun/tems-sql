@@ -41,12 +41,23 @@ BEGIN
     DECLARE V_EXCLUSION_ITEM_DESCRIPTION VARCHAR(255);
     DECLARE V_NOTES VARCHAR(500);
 
+
+    -- BILL_KEEP FIELDS
+    DECLARE V_BILL_KEEP_BAN VARCHAR(64);
+    DECLARE V_BILL_KEEP_BAN_ID INT;
+    DECLARE V_PROVINCE VARCHAR(32);
+    DECLARE V_PROVIDER VARCHAR(32);
+    DECLARE V_IMBALANCE_START DOUBLE(20, 5);
+    DECLARE V_IMBALANCE_END DOUBLE(20, 5);
+
     DECLARE V_RATE_MODE VARCHAR(64);
     DECLARE V_VENDOR_GROUP_ID INT;
 
     DECLARE V_ORIGIN_RATE_EFFECTIVE_DATE VARCHAR(12);
 
     DECLARE V_TARIFF_RATE_BY_QUANTITY_ID INT;
+
+    DECLARE V_TARIFF_RATE_BY_BILL_KEEP_ID INT;
 
     DECLARE V_MAPPING_KEY_FIELD VARCHAR(64);
     DECLARE V_REFERENCE_TABLE VARCHAR(64);
@@ -58,9 +69,12 @@ BEGIN
 
     DECLARE V_TARIFF_FILE_ITEM_COUNT INT;
     DECLARE V_TARIFF_ITEM_COUNT INT;
+
     DECLARE V_AUDIT_REFERENCE_MAPPING_ITEM_COUNT INT;
     DECLARE V_AUDIT_RATE_PERIOD_ITEM_COUNT INT;
     DECLARE V_TARIFF_RATE_BY_QUANTITY_ITEM_COUNT INT;
+
+    DECLARE V_TARIFF_RATE_BY_BILL_KEEP_ITEM_COUNT INT;
 
     DECLARE V_AUDIT_RATE_PERIOD_RATE_ANY_ITEM_COUNT INT;
 
@@ -103,6 +117,12 @@ BEGIN
             discount,
             exclusion_ban,
             exclusion_item_description,
+            bill_keep_ban_id,
+            bill_keep_ban,
+            province,
+            provider,
+            imbalance_start,
+            imbalance_end,
             notes
                 INTO
                     V_TABLE_ID,
@@ -133,6 +153,12 @@ BEGIN
                     V_DISOCUNT,
                     V_EXCLUSION_BAN,
                     V_EXCLUSION_ITEM_DESCRIPTION,
+                    V_BILL_KEEP_BAN_ID,
+                    V_BILL_KEEP_BAN,
+                    V_PROVINCE,
+                    V_PROVIDER,
+                    V_IMBALANCE_START,
+                    V_IMBALANCE_END,
                     V_NOTES
         FROM rate_rule_tariff_original
         WHERE sync_flag = 'N'
@@ -154,6 +180,7 @@ BEGIN
             V_AUDIT_REFERENCE_MAPPING_ID
         );
 
+        -- [V_AUDIT_REFERENCE_MAPPING_ITEM_COUNT = 0] denotes New Mapping Rule
         IF(V_AUDIT_REFERENCE_MAPPING_ITEM_COUNT = 0) THEN
 
             SELECT COUNT(1) INTO V_TARIFF_FILE_ITEM_COUNT
@@ -211,7 +238,8 @@ BEGIN
             SET V_VENDOR_GROUP_ID = FN_GET_TARIFF_VENDOR_GROUP_ID(V_TABLE_ID);
           
             INSERT INTO audit_reference_mapping(
-                vendor_group_id, 
+                vendor_group_id,
+                ban_id,
                 summary_vendor_name, 
                 vendor_name, 
                 key_field,
@@ -230,6 +258,7 @@ BEGIN
             )
             VALUES (
                 V_VENDOR_GROUP_ID,
+                V_BILL_KEEP_BAN_ID,
                 V_SUMMARY_VENDOR_NAME,
                 V_VENDOR_NAME,
                 V_MAPPING_KEY_FIELD,
@@ -771,6 +800,213 @@ BEGIN
                         FROM audit_rate_period
                         WHERE reference_table = 'tariff_rate_by_quantity'
                             AND reference_id = V_TARIFF_RATE_BY_QUANTITY_ID
+                            AND end_date IS NULL
+                            AND rec_active_flag = 'Y'
+                        LIMIT 1;
+
+                        UPDATE rate_rule_tariff_original
+                        SET audit_rate_period_id = V_AUDIT_RATE_PERIOD_ID
+                        WHERE id = V_TABLE_ID;
+
+                    END IF;
+
+                END IF;
+
+            END IF;
+
+        ELSEIF V_REFERENCE_TABLE = 'tariff_rate_by_bill_keep' THEN
+
+            SELECT COUNT(1) INTO V_TARIFF_RATE_BY_BILL_KEEP_ITEM_COUNT
+            FROM tariff_rate_by_bill_keep
+            WHERE 1 = 1
+                AND tariff_id = V_TARIFF_ID
+                AND trunk_start = V_QUANTITY_BEGIN
+                AND (trunk_end IS NULL OR trunk_end = V_QUANTITY_END)
+                AND imbalance_start = V_IMBALANCE_START
+                AND (imbalance_end IS NULL OR imbalance_end = V_IMBALANCE_END);
+
+            IF(V_TARIFF_RATE_BY_BILL_KEEP_ITEM_COUNT = 0) THEN
+            -- The record is not exixts in tariff_rate_by_quantity table.
+
+                INSERT INTO tariff_rate_by_bill_keep(
+                    tariff_id,
+                    province,
+                    provider,
+                    trunk_start,
+                    trunk_end,
+                    imbalance_start,
+                    imbalance_end
+                )
+                VALUES(
+                    V_TARIFF_ID,
+                    V_PROVINCE,
+                    V_PROVIDER,
+                    V_QUANTITY_BEGIN,
+                    V_QUANTITY_END,
+                    V_IMBALANCE_START,
+                    V_IMBALANCE_END
+                );
+
+                SET V_TARIFF_RATE_BY_BILL_KEEP_ID = (
+                    SELECT MAX(id) FROM tariff_rate_by_bill_keep
+                );
+
+                INSERT INTO audit_rate_period(
+                    reference_table, 
+                    reference_id,
+                    start_date,
+                    end_date,
+                    rate,
+                    rules_details
+                )
+                VALUES(
+                    'tariff_rate_by_bill_keep',
+                    V_TARIFF_RATE_BY_BILL_KEEP_ID,
+                    V_RATE_EFFECTIVE_DATE,
+                    NULL,
+                    V_RATE,
+                    V_RULES_DETAILS
+                );
+
+                SET V_AUDIT_RATE_PERIOD_ID = (
+                    SELECT MAX(id) FROM audit_rate_period
+                );
+
+                UPDATE rate_rule_tariff_original
+                SET audit_rate_period_id = V_AUDIT_RATE_PERIOD_ID
+                WHERE id = V_TABLE_ID;
+
+            ELSE
+                
+                SELECT id INTO V_TARIFF_RATE_BY_BILL_KEEP_ID
+                FROM tariff_rate_by_bill_keep
+                WHERE 1 = 1
+                    AND tariff_id = V_TARIFF_ID
+                    AND trunk_start = V_QUANTITY_BEGIN
+                    AND (trunk_end IS NULL OR trunk_end = V_QUANTITY_END)
+                    AND imbalance_start = V_IMBALANCE_START
+                    AND (imbalance_end IS NULL OR imbalance_end = V_IMBALANCE_END);
+
+                SELECT COUNT(1) INTO V_AUDIT_RATE_PERIOD_ITEM_COUNT
+                FROM audit_rate_period
+                WHERE 1 = 1
+                    AND reference_table = 'tariff_rate_by_bill_keep'
+                    AND reference_id = V_TARIFF_RATE_BY_BILL_KEEP_ID
+                    AND rec_active_flag = 'Y';
+
+                IF(V_AUDIT_RATE_PERIOD_ITEM_COUNT = 0) THEN
+                -- Not exists in audit_rate_period table.
+
+                    INSERT INTO audit_rate_period(
+                        reference_table, 
+                        reference_id,
+                        start_date,
+                        end_date,
+                        rate,
+                        rules_details
+                    )
+                    VALUES(
+                        'tariff_rate_by_bill_keep',
+                        V_TARIFF_RATE_BY_BILL_KEEP_ID,
+                        V_RATE_EFFECTIVE_DATE,
+                        NULL,
+                        V_RATE,
+                        V_RULES_DETAILS
+                    );
+
+                    SET V_AUDIT_RATE_PERIOD_ID = (
+                        SELECT MAX(id) FROM audit_rate_period
+                    );
+
+                    UPDATE rate_rule_tariff_original
+                    SET audit_rate_period_id = V_AUDIT_RATE_PERIOD_ID
+                    WHERE id = V_TABLE_ID;
+
+                ELSE
+
+                    SELECT start_date INTO V_START_DATE
+                    FROM audit_rate_period
+                    WHERE reference_table = 'tariff_rate_by_bill_keep'
+                        AND reference_id = V_TARIFF_RATE_BY_BILL_KEEP_ID
+                        AND end_date IS NULL
+                        AND rec_active_flag = 'Y'
+                    LIMIT 1;
+
+                    IF (V_RATE_EFFECTIVE_DATE > V_START_DATE) THEN
+
+                        UPDATE audit_rate_period
+                        SET end_date = DATE_SUB(V_RATE_EFFECTIVE_DATE, INTERVAL 1 DAY)
+                        WHERE reference_table = 'tariff_rate_by_bill_keep'
+                            AND reference_id = V_TARIFF_RATE_BY_BILL_KEEP_ID
+                            AND end_date IS NULL;
+
+                        INSERT INTO audit_rate_period(
+                            reference_table, 
+                            reference_id,
+                            start_date,
+                            end_date,
+                            rate,
+                            rules_details
+                        )
+                        VALUES(
+                            'tariff_rate_by_bill_keep',
+                            V_TARIFF_RATE_BY_BILL_KEEP_ID,
+                            V_RATE_EFFECTIVE_DATE,
+                            NULL,
+                            V_RATE,
+                            V_RULES_DETAILS
+                        );
+
+                        SET V_AUDIT_RATE_PERIOD_ID = (
+                            SELECT MAX(id) FROM audit_rate_period
+                        );
+
+                        UPDATE rate_rule_tariff_original
+                        SET audit_rate_period_id = V_AUDIT_RATE_PERIOD_ID
+                        WHERE id = V_TABLE_ID;
+
+                    ELSEIF (V_RATE_EFFECTIVE_DATE < V_START_DATE) THEN
+
+                        SELECT start_date INTO V_START_DATE
+                        FROM audit_rate_period
+                        WHERE reference_table = 'tariff_rate_by_bill_keep'
+                            AND reference_id = V_TARIFF_RATE_BY_BILL_KEEP_ID
+                            AND start_date > V_RATE_EFFECTIVE_DATE
+                            AND rec_active_flag = 'Y'
+                        ORDER BY start_date
+                        LIMIT 1;
+
+                        INSERT INTO audit_rate_period(
+                            reference_table, 
+                            reference_id,
+                            start_date,
+                            end_date,
+                            rate,
+                            rules_details
+                        )
+                        VALUES(
+                            'tariff_rate_by_bill_keep',
+                            V_TARIFF_RATE_BY_BILL_KEEP_ID,
+                            V_RATE_EFFECTIVE_DATE,
+                            DATE_SUB(V_START_DATE, INTERVAL 1 DAY),
+                            V_RATE,
+                            V_RULES_DETAILS
+                        );
+
+                        SET V_AUDIT_RATE_PERIOD_ID = (
+                            SELECT MAX(id) FROM audit_rate_period
+                        );
+
+                        UPDATE rate_rule_tariff_original
+                        SET audit_rate_period_id = V_AUDIT_RATE_PERIOD_ID
+                        WHERE id = V_TABLE_ID;
+
+                    ELSE
+
+                        SELECT id INTO V_AUDIT_RATE_PERIOD_ID
+                        FROM audit_rate_period
+                        WHERE reference_table = 'tariff_rate_by_bill_keep'
+                            AND reference_id = V_TARIFF_RATE_BY_BILL_KEEP_ID
                             AND end_date IS NULL
                             AND rec_active_flag = 'Y'
                         LIMIT 1;
