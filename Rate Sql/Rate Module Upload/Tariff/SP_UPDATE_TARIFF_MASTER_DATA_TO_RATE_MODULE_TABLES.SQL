@@ -30,6 +30,15 @@ BEGIN
   DECLARE V_QUANTITY_BEGIN INT;
   DECLARE V_QUANTITY_END INT;
 
+  -- BILL_KEEP FIELDS
+  DECLARE V_BILL_KEEP_BAN VARCHAR(64);
+  DECLARE V_BILL_KEEP_BAN_ID INT;
+  DECLARE V_PROVINCE VARCHAR(32);
+  DECLARE V_PROVIDER VARCHAR(32);
+  DECLARE V_IMBALANCE_START DOUBLE(20, 5);
+  DECLARE V_IMBALANCE_END DOUBLE(20, 5);
+
+
   DECLARE V_TARIFF_FILE_NAME VARCHAR(64);
   
   DECLARE V_TARIFF_NAME VARCHAR(500);
@@ -77,6 +86,14 @@ BEGIN
   DECLARE V_ORIGIN_EXCLUSION_ITEM_DESCRIPTION VARCHAR(255);
   DECLARE V_ORIGIN_NOTES VARCHAR(500);
 
+  -- BILL_KEEP FIELDS
+  DECLARE V_ORIGINAL_BILL_KEEP_BAN VARCHAR(64);
+  DECLARE V_ORIGINAL_BILL_KEEP_BAN_ID INT;
+  DECLARE V_ORIGINAL_PROVINCE VARCHAR(32);
+  DECLARE V_ORIGINAL_PROVIDER VARCHAR(32);
+  DECLARE V_ORIGINAL_IMBALANCE_START DOUBLE(20, 5);
+  DECLARE V_ORIGINAL_IMBALANCE_END DOUBLE(20, 5);
+
   /**
    * 用来标记在插入的时候是否， 和表中的数据重复。
    */
@@ -95,6 +112,8 @@ BEGIN
   
   DECLARE V_CURSOR_DONE_FLAG BOOLEAN DEFAULT FALSE;
 
+  -- 勇哥还没有在 rate_rule_tariff_master_batch 中加 imbalance_start,
+  -- imbalance_end 字段。
   DECLARE V_TARIFF_MASTER_DATA_CURSOR CURSOR FOR
     SELECT
       TRIM( rate_id ),
@@ -125,6 +144,12 @@ BEGIN
       TRIM( discount ),
       TRIM( exclusion_ban ),
       TRIM( exclusion_item_description ),
+      TRIM( bill_keep_ban_id ),
+      TRIM( bill_keep_ban ),
+      TRIM( province ),
+      TRIM( provider ),
+      TRIM( imbalance_start ),
+      TRIM( imbalance_end ),
       TRIM( notes )
     FROM rate_rule_tariff_master_batch
     WHERE batch_no = PARAM_BATCH_NO;
@@ -169,6 +194,12 @@ BEGIN
           V_DISOCUNT,
           V_EXCUSION_BAN,
           V_EXCLUSION_ITEM_DESCRIPTION,
+          V_BILL_KEEP_BAN_ID,
+          V_BILL_KEEP_BAN,
+          V_PROVINCE,
+          V_PROVIDER,
+          V_IMBALANCE_START,
+          V_IMBALANCE_END,
           V_NOTES;
 
       IF (V_CURSOR_DONE_FLAG) THEN
@@ -197,9 +228,7 @@ BEGIN
         CALL SP_UPDATE_TARIFF_RATE_MODULE_TABLES(V_SYSTEM_RULE_ID, PARAM_BATCH_NO);
 
       ELSEIF (V_LOADING_MODE = V_INSERT_LOADING_MODE) THEN
-        /**
-         * Inserted 模式。
-         */
+        -- Insert mode.
         
         INSERT INTO rate_rule_tariff_original(
             charge_type,
@@ -229,6 +258,12 @@ BEGIN
             discount,
             exclusion_ban,
             exclusion_item_description,
+            bill_keep_ban,
+            bill_keep_ban_id,
+            province,
+            provider,
+            imbalance_start,
+            imbalance_end,
             notes,
             sync_flag,
             created_timestamp
@@ -261,6 +296,12 @@ BEGIN
             V_DISOCUNT,
             V_EXCUSION_BAN,
             V_EXCLUSION_ITEM_DESCRIPTION,
+            V_BILL_KEEP_BAN,
+            V_BILL_KEEP_BAN_ID,
+            V_PROVINCE,
+            V_PROVIDER,
+            V_IMBALANCE_START,
+            V_IMBALANCE_END,
             V_NOTES,
             'N',
             NOW()
@@ -288,7 +329,7 @@ BEGIN
   /**
    * 处理完数据之后，执行删除操作。
    */
-  DELETE FROM rate_rule_tariff_master_batch WHERE batch_no = PARAM_BATCH_NO;
+  -- DELETE FROM rate_rule_tariff_master_batch WHERE batch_no = PARAM_BATCH_NO;
   
 
 END

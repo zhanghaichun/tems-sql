@@ -23,6 +23,8 @@ BEGIN
     DECLARE V_QUANTITY_BEGIN INT;
     DECLARE V_QUANTITY_END INT;
 
+    DECLARE V_BILL_KEEP_BAN_ID INT;
+
     DECLARE CONST_USOC_KEY VARCHAR(64) DEFAULT 'usoc';
     DECLARE CONST_LINE_ITEM_CODE_KEY VARCHAR(64) DEFAULT 'line_item_code';
     DECLARE CONST_LINE_ITEM_CODE_DESCRIPTION_KEY VARCHAR(64) DEFAULT 'line_item_code_description';
@@ -38,6 +40,7 @@ BEGIN
         line_item_code_description,
         line_item_code,
         item_type,
+        bill_keep_ban_id,
         item_description,
         quantity_begin,
         quantity_end
@@ -49,6 +52,7 @@ BEGIN
                 V_LINE_ITEM_CODE_DESCRIPTION,
                 V_LINE_ITEM_CODE,
                 V_ITEM_TYPE,
+                V_BILL_KEEP_BAN_ID,
                 V_ITEM_DESCRIPTIOIN,
                 V_QUANTITY_BEGIN,
                 V_QUANTITY_END
@@ -59,42 +63,42 @@ BEGIN
 
     IF ( PARAM_AUDIT_KEY_FIELD = CONST_USOC_KEY ) THEN
 
-    SELECT 
-        COUNT(1), 
-        id
+        SELECT 
+            COUNT(1), 
+            id
             INTO 
                 PARAM_MAPPING_ITEM_COUNT,
                 PARAM_MAPPING_ITEM_ID
-    FROM audit_reference_mapping
-    WHERE 1 = 1
-        AND audit_reference_type_id = 2
-        AND usoc = V_USOC
-        AND (
-            CASE
-                WHEN V_SUMMARY_VENDOR_NAME IS NOT NULL THEN
-                    summary_vendor_name = V_SUMMARY_VENDOR_NAME
-                ELSE
-                    summary_vendor_name IS NULL
-            END
-        )
-        AND (
-            CASE
-                WHEN V_VENDOR_NAME IS NOT NULL THEN
-                    vendor_name = V_VENDOR_NAME
-                ELSE
-                    vendor_name IS NULL
-            END
-        )
-        AND rec_active_flag = 'Y';
+        FROM audit_reference_mapping
+        WHERE 1 = 1
+            AND audit_reference_type_id = 2
+            AND usoc = V_USOC
+            AND (
+                CASE
+                    WHEN V_SUMMARY_VENDOR_NAME IS NOT NULL THEN
+                        summary_vendor_name = V_SUMMARY_VENDOR_NAME
+                    ELSE
+                        summary_vendor_name IS NULL
+                END
+            )
+            AND (
+                CASE
+                    WHEN V_VENDOR_NAME IS NOT NULL THEN
+                        vendor_name = V_VENDOR_NAME
+                    ELSE
+                        vendor_name IS NULL
+                END
+            )
+            AND rec_active_flag = 'Y';
 
     ELSEIF (PARAM_AUDIT_KEY_FIELD = CONST_LINE_ITEM_CODE_KEY) THEN
 
     SELECT 
         COUNT(1), 
         id
-            INTO 
-                PARAM_MAPPING_ITEM_COUNT,
-                PARAM_MAPPING_ITEM_ID
+        INTO 
+            PARAM_MAPPING_ITEM_COUNT,
+            PARAM_MAPPING_ITEM_ID
     FROM audit_reference_mapping
     WHERE 1 = 1
         AND audit_reference_type_id = 2
@@ -179,33 +183,48 @@ BEGIN
 
     ELSEIF (PARAM_AUDIT_KEY_FIELD = CONST_USAGE_ITEM_TYPE_KEY) THEN
 
-    SELECT 
-        COUNT(1), 
-        id
-            INTO 
-                PARAM_MAPPING_ITEM_COUNT,
-                PARAM_MAPPING_ITEM_ID
-    FROM audit_reference_mapping
-    WHERE 1 = 1
-        AND audit_reference_type_id = 2
-        AND usage_item_type = V_ITEM_TYPE
-        AND (
-            CASE
-                WHEN V_SUMMARY_VENDOR_NAME IS NOT NULL THEN
-                    summary_vendor_name = V_SUMMARY_VENDOR_NAME
-                ELSE
-                    summary_vendor_name IS NULL
-            END
-        )
-        AND (
-            CASE
-                WHEN V_VENDOR_NAME IS NOT NULL THEN
-                    vendor_name = V_VENDOR_NAME
-                ELSE
-                    vendor_name IS NULL
-            END
-        )
-        AND rec_active_flag = 'Y';
+        SELECT 
+            COUNT(1), 
+            id
+                INTO 
+                    PARAM_MAPPING_ITEM_COUNT,
+                    PARAM_MAPPING_ITEM_ID
+        FROM audit_reference_mapping
+        WHERE 1 = 1
+            AND audit_reference_type_id = 2
+            AND usage_item_type = V_ITEM_TYPE
+            AND (
+                CASE
+                    WHEN V_SUMMARY_VENDOR_NAME IS NOT NULL THEN
+                        summary_vendor_name = V_SUMMARY_VENDOR_NAME
+                    ELSE
+                        summary_vendor_name IS NULL
+                END
+            )
+            AND (
+                CASE
+                    WHEN V_VENDOR_NAME IS NOT NULL THEN
+                        vendor_name = V_VENDOR_NAME
+                    ELSE
+                        vendor_name IS NULL
+                END
+            )
+            AND rec_active_flag = 'Y';
+
+    ELSEIF PARAM_AUDIT_KEY_FIELD = CONST_BILL_KEEP_BAN_KEY THEN
+
+        SELECT 
+            COUNT(1), 
+            id
+                INTO 
+                    PARAM_MAPPING_ITEM_COUNT,
+                    PARAM_MAPPING_ITEM_ID
+        FROM audit_reference_mapping
+        WHERE 1 = 1
+            AND audit_reference_type_id = 2
+            AND ban_id = V_BILL_KEEP_BAN_ID
+            AND key_field = CONST_BILL_KEEP_BAN_KEY
+            AND rec_active_flag = 'Y';
 
     END IF;
 

@@ -1,0 +1,29 @@
+ALTER TABLE `rate_length_import`
+ADD COLUMN `bill_keep_ban`  mediumint NULL AFTER `notes`,
+ADD COLUMN `province`  mediumint NULL AFTER `bill_keep_ban`,
+ADD COLUMN `provider`  mediumint NULL AFTER `province`,
+ADD COLUMN `imbalance_start`  mediumint NULL AFTER `provider`,
+ADD COLUMN `imbalance_end`  mediumint NULL AFTER `imbalance_start`;
+
+ALTER TABLE `rate_rule_tariff_master_batch`
+ADD COLUMN `bill_keep_ban_id`  int(11) NULL AFTER `notes`,
+ADD COLUMN `bill_keep_ban`  varchar(64) NULL AFTER `bill_keep_ban_id`,
+ADD COLUMN `province`  varchar(16) NULL AFTER `bill_keep_ban`,
+ADD COLUMN `provider`  varchar(64) NULL AFTER `province`,
+ADD COLUMN `imbalance_start`  double(20,5) NULL AFTER `provider`,
+ADD COLUMN `imbalance_end`  double(20,5) NULL AFTER `imbalance_start`;
+
+ALTER TABLE `rate_rule_tariff_master_import`
+ADD COLUMN `bill_keep_ban`  varchar(64) NULL AFTER `notes`,
+ADD COLUMN `province`  varchar(32) NULL AFTER `bill_keep_ban`,
+ADD COLUMN `provider`  varchar(32) NULL AFTER `province`,
+ADD COLUMN `imbalance_start`  varchar(25) NULL AFTER `provider`,
+ADD COLUMN `imbalance_end`  varchar(25) NULL AFTER `imbalance_start`;
+
+
+-- 下面的一些存储过程更新，
+SP_AUDIT_INVOICE_BILL_KEEP
+SP_AUDIT_INVOICE_BILL_KEEP_FOR_TARIFF
+SP_RATE_VERIFICATION
+SP_RATE_VERIFICATION_LENGTH
+SP_AUDIT_INVOICE
